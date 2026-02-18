@@ -1,0 +1,18 @@
+-- ============================================================
+-- Admin Notifications Migration
+-- STATUS: Already applied. All objects exist in the database.
+-- This file is kept for reference only.
+-- ============================================================
+-- Objects created:
+--   - device_tokens table (with RLS)
+--   - notification_type enum values: dispute_filed, dispute_escalated,
+--     dispute_resolved, driver_pending_approval, driver_document_uploaded,
+--     driver_suspended, payment_failed, payment_refund_requested, admin_system_alert
+--   - notify_all_admins() function
+--   - trigger_notify_dispute_filed() + trigger on disputes
+--   - trigger_notify_dispute_updated() + trigger on disputes
+--   - trigger_notify_driver_registered() + trigger on users
+--   - trigger_notify_driver_status_changed() + trigger on users
+--   - trigger_notify_document_uploaded() + trigger on driver_docs
+--   - Updated send_notification_with_preferences() for device_tokens
+--   - create_default_admin_notification_preferences() function

@@ -1,0 +1,381 @@
+C:.
+│   main.dart
+│
+├───core
+│   │   core.dart
+│   │
+│   ├───components
+│   │       components.dart
+│   │       document_viewer_controller.dart
+│   │       document_viewer_screen.dart
+│   │       document_viewer_state.dart
+│   │       empty_state.dart
+│   │       loading_state.dart
+│   │       main_scaffold.dart
+│   │       router_integration.dart
+│   │
+│   ├───error
+│   │       app_exception.dart
+│   │       error.dart
+│   │       error_boundary.dart
+│   │       error_display.dart
+│   │       error_handler.dart
+│   │       exceptions.dart
+│   │       network_error_widget.dart
+│   │
+│   ├───navigation
+│   │       app_router.dart
+│   │
+│   ├───router
+│   │       router_analytics.dart
+│   │
+│   ├───services
+│   │       bulksms_service.dart
+│   │       connectivity_service.dart
+│   │       core_providers.dart
+│   │       jwt_recovery_handler.dart
+│   │       logger_service.dart
+│   │       session_service.dart
+│   │       storage_service.dart
+│   │       supabase_provider.dart
+│   │
+│   ├───theme
+│   │       app_colors.dart
+│   │       app_dimensions.dart
+│   │       app_text_styles.dart
+│   │       app_theme.dart
+│   │
+│   └───utils
+│           app_config.dart
+│           constants.dart
+│           extensions.dart
+│           formatters.dart
+│           validators.dart
+│
+└───features
+    ├───analytics
+    │   │   analytics.dart
+    │   │
+    │   ├───data
+    │   │   └───repositories
+    │   │           analytics_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       activity_metrics.dart
+    │   │   │       date_range.dart
+    │   │   │       financial_metrics.dart
+    │   │   │       performance_metrics.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           analytics_repository.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       analytics_providers.dart
+    │       │
+    │       ├───screens
+    │       │       analytics_screen.dart
+    │       │
+    │       └───widgets
+    │               date_range_selector.dart
+    │               metric_card.dart
+    │               ratings_chart.dart
+    │               revenue_chart.dart
+    │               shipments_chart.dart
+    │
+    ├───audit_logs
+    │   │   files.zip
+    │   │
+    │   ├───data
+    │   │   └───repositories
+    │   │           audit_logs_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       audit_log_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           audit_logs_repository.dart
+    │   │
+    │   ├───files
+    │   │       README.md
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       audit_logs_providers.dart
+    │       │
+    │       ├───screens
+    │       │       audit_logs_screen.dart
+    │       │
+    │       └───widgets
+    │               audit_log_tile.dart
+    │
+    ├───auth
+    │   ├───data
+    │   │   ├───models
+    │   │   ├───repositories
+    │   │   └───services
+    │   │           auth_service.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   └───repositories
+    │   └───presentation
+    │       ├───controllers
+    │       ├───providers
+    │       │       auth_notifier.dart
+    │       │       auth_provider.dart
+    │       │       auth_state.dart
+    │       │
+    │       ├───screens
+    │       │       signup_screen.dart
+    │       │
+    │       └───widgets
+    ├───dashboard
+    │   │   files.zip
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   │       dashboard_stats_model.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           dashboard_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       dashboard_stats.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           dashboard_repository.dart
+    │   │
+    │   ├───files
+    │   │       README.md
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       dashboard_providers.dart
+    │       │
+    │       ├───screens
+    │       │       dashboard_screen.dart
+    │       │
+    │       └───widgets
+    │               quick_actions_section.dart
+    │               stat_card.dart
+    │               trend_indicator.dart
+    │
+    ├───disputes
+    │   │   files.zip
+    │   │
+    │   ├───data
+    │   │   └───repositories
+    │   │           disputes_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       dispute_entity.dart
+    │   │   │       evidence_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           disputes_repository.dart
+    │   │
+    │   ├───files
+    │   │       README.md
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       disputes_providers.dart
+    │       │
+    │       ├───screen
+    │       │       disputes_list_screen.dart
+    │       │       dispute_detail_screen.dart
+    │       │
+    │       └───widgets
+    │               dispute_priority_badge.dart
+    │               dispute_status_badge.dart
+    │               dispute_tile.dart
+    │               dispute_timeline.dart
+    │               evidence_gallery.dart
+    │               resolution_dialog.dart
+    │
+    ├───messages
+    │   │   files.zip
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   └───repositories
+    │   │           messages_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       conversation_entity.dart
+    │   │   │       message_entity.dart
+    │   │   │       message_template_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           messages_repository.dart
+    │   │
+    │   ├───files
+    │   │       README.md
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       messages_providers.dart
+    │       │
+    │       ├───routes
+    │       │       messages_routes.dart
+    │       │
+    │       ├───screens
+    │       │       broadcast_screen.dart
+    │       │       compose_message_screen.dart
+    │       │       conversation_screen.dart
+    │       │       messages_screen.dart
+    │       │
+    │       └───widgets
+    │               broadcast_tile.dart
+    │               conversation_tile.dart
+    │               message_bubble.dart
+    │               template_selector.dart
+    │               template_tile.dart
+    │               user_selector.dart
+    │
+    ├───more
+    │   ├───data
+    │   │   ├───models
+    │   │   └───repositories
+    │   ├───domain
+    │   │   ├───entities
+    │   │   └───repositories
+    │   └───presentation
+    │       ├───controllers
+    │       ├───providers
+    │       ├───screens
+    │       │       more_screen.dart
+    │       │
+    │       └───widgets
+    ├───payments
+    │   │   files.zip
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   │       payment_model.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           payments_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       payment_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           payments_repository.dart
+    │   │
+    │   ├───files
+    │   └───presentation
+    │       ├───providers
+    │       │       payments_providers.dart
+    │       │
+    │       ├───routes
+    │       │       payments_routes.dart
+    │       │
+    │       ├───screens
+    │       │       payments_screen.dart
+    │       │       transactions_list_screen.dart
+    │       │       transaction_detail_screen.dart
+    │       │
+    │       └───widgets
+    │               payment_list_tile.dart
+    │               payment_status_badge.dart
+    │               refund_dialog.dart
+    │               retry_dialog.dart
+    │
+    ├───shippers
+    │   │   files.zip
+    │   │
+    │   ├───data
+    │   │   └───repositories
+    │   │           shippers_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       shipper_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           shippers_repository.dart
+    │   │
+    │   ├───files
+    │   │       README.md
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       shippers_providers.dart
+    │       │
+    │       ├───screens
+    │       │       shippers_list_screen.dart
+    │       │       shipper_detail_screen.dart
+    │       │
+    │       └───widgets
+    │               shipper_tile.dart
+    │
+    └───users
+        │   files.zip
+        │
+        ├───data
+        │   ├───models
+        │   │       approval_history_model.dart
+        │   │       driver_bank_account_model.dart
+        │   │       driver_document_model.dart
+        │   │       driver_model.dart
+        │   │       driver_profile_model.dart
+        │   │       vehicle_model.dart
+        │   │
+        │   └───repositories
+        │           drivers_profile_repository.dart
+        │           drivers_repository_impl.dart
+        │           vehicles_repository_impl.dart
+        │
+        ├───domain
+        │   ├───entities
+        │   │       approval_history_item.dart
+        │   │       driver_bank_account.dart
+        │   │       driver_document.dart
+        │   │       driver_entity.dart
+        │   │       driver_profile.dart
+        │   │       vehicle_entity.dart
+        │   │
+        │   └───repositories
+        │           drivers_repository.dart
+        │           vehicles_repository.dart
+        │
+        ├───files
+        │       README.md
+        │       vehicle_routes_snippet.dart
+        │
+        └───presentation
+            ├───controllers
+            ├───providers
+            │       drivers_providers.dart
+            │       driver_profile_providers.dart
+            │       vehicle_providers.dart
+            │
+            ├───screens
+            │       drivers_list_screen.dart
+            │       driver_profile_screen.dart
+            │       shipper_profile_screen.dart
+            │       users_screen.dart
+            │       vehicles_list_screen.dart
+            │       vehicle_detail_screen.dart
+            │
+            └───widgets
+                    approval_timeline.dart
+                    approve_confirm_dialog.dart
+                    document_thumbnail.dart
+                    driver_list_tile.dart
+                    info_section.dart
+                    profile_header.dart
+                    reject_dialog.dart
+                    request_documents_dialog.dart
+                    search_header.dart
+                    status_badge.dart
+                    vehicle_approval_timeline.dart
+                    vehicle_card.dart

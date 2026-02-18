@@ -1,0 +1,104 @@
+name: loadrunner_admin
+description: LoadRunner Admin Dashboard - Administrative interface for managing the LoadRunner logistics platform.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Backend & Networking
+  supabase_flutter: ^2.8.2
+  dio: ^5.7.0
+  http: ^1.2.2
+
+  # Local Storage
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+
+  # UI Components
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.10+1
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  fl_chart: ^0.69.2
+  country_code_picker: ^3.0.0
+
+  # Utilities
+  intl: ^0.19.0
+  uuid: ^4.5.1
+  equatable: ^2.0.5
+  logger: ^2.4.0
+  timeago: ^3.7.0
+  url_launcher: ^6.3.1
+  path_provider: ^2.1.5
+  
+  # Environment Variables
+  flutter_dotenv: ^5.2.1
+
+  # Image handling
+  image_picker: ^1.1.2
+  photo_view: ^0.15.0
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Connectivity
+  connectivity_plus: ^6.1.1
+
+  # Firebase (Push Notifications)
+  firebase_core: ^3.8.1
+  firebase_messaging: ^15.1.6
+
+  # JSON & Data
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  riverpod_generator: ^2.4.3
+  build_runner: ^2.4.13
+  json_serializable: ^6.8.0
+  freezed: ^2.5.7
+  freezed_annotation: ^2.4.4
+  mockito: ^5.4.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icons/app_icon.png"
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/logo_l.png
+    - assets/images/logo_d.png
+    - assets/images/icons/
+    - .env
+
+  # Fonts will be added when available
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: assets/fonts/Roboto-Regular.ttf
+  #       - asset: assets/fonts/Roboto-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Roboto-Bold.ttf
+  #         weight: 700

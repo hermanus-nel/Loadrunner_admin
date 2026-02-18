@@ -1,0 +1,3380 @@
+LoadRunner Admin Dashboard - Implementation Breakdown
+Version: 1.1 Date: January 27, 2026 Purpose: Step-by-step guide to build a complete, functional LoadRunner Admin Dashboard app
+Timeline: 3-4 months (based on original spec)
+v1.1 Changes: Updated to align with actual database schema. Key changes:
+* Admins use users table with role='Admin' (no separate admin_users table)
+* Drivers use users table with role='Driver' (no separate drivers table)
+* Documents stored in driver_docs table with doc_type field
+* Shippers auto-approved on phone sign-in (no approval workflow)
+* Bank accounts only for drivers (driver_bank_accounts)
+* Shipments table is freight_posts
+* Added enums for type safety
+How to Use This Guide:
+1. Follow steps sequentially - each step builds on previous ones
+2. Copy the Claude prompt for each step to get detailed implementation guidance
+3. Verify success criteria before moving to next step
+4. All file paths are relative to the admin dashboard project root
+
+Table of Contents
+Phase 1: Foundation (Week 1-2)
+* Step 1: Project Setup & Architecture
+* Step 2: Database Schema Migration
+* Step 3: Environment & Dependencies
+* Step 4: Core Services Setup
+Phase 2: Authentication (Week 2-3)
+* Step 5: Admin Authentication System
+* Step 6: Login Screen & 2FA
+* Step 7: Session Management
+Phase 3: App Shell & Navigation (Week 3-4)
+* Step 8: Main Navigation Structure
+* Step 9: Theme & Design System
+* Step 10: Dashboard Home Screen
+Phase 4: User Management - Drivers (Week 4-7)
+* Step 11: Driver List & Filtering
+* Step 12: Driver Profile View
+* Step 13: Document Viewer Component
+* Step 14: Approval Workflow
+* Step 15: Vehicle Management
+Phase 5: Statistics & Analytics (Week 7-9)
+* Step 16: Dashboard Overview Stats
+* Step 17: Activity Metrics
+* Step 18: Financial Metrics
+* Step 19: Performance & Growth Metrics
+* Step 20: Charts & Visualizations
+Phase 6: Payment Management (Week 9-11)
+* Step 21: Transactions List
+* Step 22: Transaction Details & Refunds
+* Step 23: Failed Payments Handling
+Phase 7: Bank Verification (Week 11-12)
+* Step 24: Bank Verification UI
+* Step 25: Third-Party API Integration
+Phase 8: Communication (Week 12-13)
+* Step 26: In-App Messaging
+* Step 27: Push Notifications
+* Step 28: Message Templates
+Phase 9: Dispute Resolution (Week 13-15)
+* Step 29: Disputes List
+* Step 30: Dispute Details & Resolution
+* Step 31: Evidence Management
+Phase 10: Additional Features (Week 15-16)
+* Step 32: SMS Usage Tracking
+* Step 33: Shipper Management (View Only)
+* Step 34: Audit Logs Viewer
+* Step 35: User Suspension System
+Phase 11: Polish & Testing (Week 16-17)
+* Step 36: Error Handling & Edge Cases
+* Step 37: Performance Optimization
+* Step 38: Integration Testing
+* Step 39: Production Build & Deployment
+
+PHASE 1: FOUNDATION
+Step 1: Project Setup & Architecture
+Objective
+Create a new Flutter project for the LoadRunner Admin Dashboard with Clean Architecture structure.
+Prerequisites
+* Flutter 3.6.1+ installed
+* Git installed
+* Access to LoadRunner Supabase project
+Claude Prompt
+I need to create a new Flutter project for the LoadRunner Admin Dashboard. This is a separate app from the main LoadRunner app, but it will share the same Supabase backend.
+
+Requirements:
+1. Create a new Flutter project named "loadrunner_admin"
+2. Set up Clean Architecture folder structure with feature-based organization
+3. Configure for iOS and Android (mobile app, not web)
+4. Match the architecture patterns used in the main LoadRunner app
+
+Project structure should include:
+- lib/core/ (shared utilities, services, components, theme)
+- lib/features/ (feature modules with data/domain/presentation layers)
+- lib/main.dart (app entry point)
+
+Please:
+1. Show me the exact commands to run
+2. Create the folder structure
+3. Set up the initial main.dart with proper app initialization
+4. Create a basic README.md for the admin dashboard project
+
+Reference the main LoadRunner app structure for consistency.
+Files to Create
+loadrunner_admin/
+??? lib/
+?   ??? core/
+?   ?   ??? components/
+?   ?   ??? services/
+?   ?   ??? theme/
+?   ?   ??? utils/
+?   ?   ??? navigation/
+?   ?   ??? error/
+?   ??? features/
+?   ?   ??? auth/
+?   ?   ??? dashboard/
+?   ?   ??? users/
+?   ?   ??? payments/
+?   ?   ??? messages/
+?   ?   ??? more/
+?   ??? main.dart
+??? assets/
+?   ??? images/
+?   ??? fonts/
+??? test/
+??? pubspec.yaml
+??? .env.example
+??? README.md
+Success Criteria
+* [ ] Flutter project created and runs without errors
+* [ ] Folder structure matches Clean Architecture pattern
+* [ ] App displays a blank screen or basic "Admin Dashboard" text
+* [ ] Project builds successfully for Android and iOS
+
+Step 2: Database Schema Migration
+Objective
+Create and run database migrations to add admin dashboard tables to the existing Supabase database.
+Prerequisites
+* Completed Step 1
+* Access to Supabase project SQL editor
+* Reviewed actual schema.txt from LoadRunner project
+Claude Prompt
+I need to create SQL migration files for the LoadRunner Admin Dashboard. 
+
+IMPORTANT DATABASE FACTS:
+1. Admins use the existing `users` table with `role='Admin'` (user_role enum already includes 'Admin')
+2. Drivers use the existing `users` table with `role='Driver'` (NO separate drivers table)
+3. Driver documents are stored in `driver_docs` table with `doc_type` field
+4. Only `driver_bank_accounts` exists (NO shipper_bank_accounts)
+5. Shippers are auto-approved on phone sign-in (no approval workflow needed)
+6. Shipments table is named `freight_posts`
+
+Please create a comprehensive migration file that:
+
+1. Creates ENUMS for type safety:
+   - verification_status (pending, approved, rejected, documents_requested)
+   - dispute_status (open, under_review, awaiting_response, resolved, closed, escalated)
+   - dispute_priority (low, normal, high, urgent)
+   - dispute_type (payment, delivery, damage, non_delivery, late_delivery, wrong_item, other)
+
+2. Extends the `users` table with:
+   - Admin fields: two_factor_enabled, two_factor_secret, last_login_at, last_login_ip, failed_login_attempts, locked_until
+   - Driver verification fields: driver_verification_status (enum), driver_rejection_reason, driver_verification_notes, driver_verified_by (FK to users)
+   - Suspension fields: is_suspended, suspended_at, suspended_reason, suspended_by (FK to users)
+
+3. Extends `driver_docs` table with:
+   - verification_status (enum), verified_at, verified_by (FK to users), rejection_reason, verification_notes
+
+4. Extends `vehicles` table with:
+   - verification_status (enum), verified_at, verified_by, rejection_reason
+   - registration_document_url, insurance_document_url, additional_photos (JSONB)
+
+5. Extends `driver_bank_accounts` with:
+   - verified_by (FK to users), verification_method, verification_notes, rejected_at, rejection_reason
+
+6. Creates NEW tables:
+   - admin_audit_logs (admin_id references users, action, target_type, target_id, old_values, new_values, details, ip_address)
+   - driver_approval_history (driver_id references users, action, performed_by references users, status enum, reason, notes, requested_documents JSONB)
+   - disputes (shipment_id references freight_posts, opened_by, against_user_id, type enum, status enum, priority enum, assigned_to, resolution, resolved_by)
+   - dispute_evidence (dispute_id, uploaded_by, file_url, file_type, description, evidence_type)
+   - admin_messages (recipient_id, sent_by, message_type, title, body, priority, sent_at, read_at, push_notification_sent)
+
+7. Creates helper functions:
+   - log_admin_action()
+   - get_admin_dashboard_stats()
+   - get_pending_document_verifications()
+
+8. Sets up Row Level Security (RLS) policies
+9. Creates indexes for performance
+10. Data migration for existing records
+
+The migration should be idempotent (safe to run multiple times using IF NOT EXISTS, DO $$ blocks).
+
+Format: Single SQL file that can be run in Supabase SQL Editor.
+Name: 20260118_admin_dashboard_schema.sql
+Files to Create
+loadrunner_admin/
+??? supabase/
+    ??? migrations/
+        ??? 20260118_admin_dashboard_schema.sql
+Success Criteria
+* [ ] Migration file runs without errors in Supabase SQL Editor
+* [ ] All 4 enums created successfully
+* [ ] All 5 new tables created successfully
+* [ ] All 4 existing tables extended with new columns
+* [ ] RLS policies active and working
+* [ ] Indexes created for performance
+* [ ] Helper functions work correctly
+* [ ] Verify with: SELECT typname FROM pg_type WHERE typname IN ('verification_status', 'dispute_status');
+* [ ] Verify with: SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename LIKE '%admin%' OR tablename LIKE '%dispute%';
+
+Step 3: Environment & Dependencies
+Objective
+Set up environment configuration and install all necessary Flutter packages.
+Prerequisites
+* Completed Step 1
+* Completed Step 2
+Claude Prompt
+I need to configure the LoadRunner Admin Dashboard project with all necessary dependencies and environment setup.
+
+Please:
+
+1. Create a pubspec.yaml with all dependencies needed for:
+   - Supabase integration (supabase_flutter)
+   - State management (flutter_riverpod, riverpod_annotation)
+   - Secure storage (flutter_secure_storage)
+   - Environment variables (flutter_dotenv)
+   - Navigation (go_router)
+   - Charts (fl_chart)
+   - HTTP client (dio)
+   - Image viewing (photo_view, cached_network_image)
+   - Firebase Cloud Messaging (firebase_messaging, firebase_core)
+   - Date formatting (intl)
+   - JSON serialization (json_annotation, json_serializable, freezed, freezed_annotation)
+   - Code generation (build_runner)
+   - Linting (flutter_lints)
+
+2. Create .env.example file with required environment variables:
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY (for edge functions)
+   - PAYSTACK_SECRET_KEY (for bank verification)
+   - BULKSMS_API_KEY (for SMS tracking)
+
+3. Create .gitignore to exclude .env and other sensitive files
+
+4. Create analysis_options.yaml with strict linting rules
+
+5. Update README.md with setup instructions
+
+Match dependency versions compatible with Flutter 3.6.1+.
+Files to Create/Modify
+loadrunner_admin/
+??? pubspec.yaml (MODIFY)
+??? .env.example (CREATE)
+??? .env (CREATE - copy from .env.example and fill values)
+??? .gitignore (CREATE)
+??? analysis_options.yaml (CREATE)
+??? README.md (MODIFY)
+Success Criteria
+* [ ] flutter pub get runs without errors
+* [ ] All dependencies resolve successfully
+* [ ] .env.example created with all required variables
+* [ ] .gitignore properly configured
+* [ ] No version conflicts
+* [ ] Analysis options configured
+
+Step 4: Core Services Setup
+Objective
+Create core service layer including Supabase provider, error handling, and logging.
+Prerequisites
+* Completed Steps 1-3
+Claude Prompt
+I need to create the core services infrastructure for the LoadRunner Admin Dashboard.
+
+Please create the following core services:
+
+1. SupabaseService - Singleton wrapper for Supabase client
+   - Initialize with environment variables
+   - Provide typed client access
+   - Handle connection errors
+   - Provide realtime subscription helpers
+
+2. ApiException - Custom exception classes for error handling
+   - NetworkException
+   - AuthException  
+   - ValidationException
+   - ServerException
+   - NotFoundException
+
+3. LoggerService - Logging service for debugging
+   - Log levels (debug, info, warning, error)
+   - Console output with timestamps
+   - Optional file logging for production
+
+4. StorageService - Wrapper for flutter_secure_storage
+   - Save/read secure values
+   - Token management (access token, refresh token)
+   - Clear storage method
+   - Check if value exists
+
+5. Result class - For handling success/error states
+   - Success<T> with data
+   - Failure with error
+   - Fold method for handling both cases
+
+File structure:
+lib/core/services/
+??? supabase_service.dart
+??? storage_service.dart
+??? logger_service.dart
+
+lib/core/error/
+??? exceptions.dart
+??? failures.dart
+??? result.dart
+
+Use Clean Architecture principles and make services testable with dependency injection.
+Files to Create
+lib/core/services/supabase_service.dart
+lib/core/services/storage_service.dart
+lib/core/services/logger_service.dart
+lib/core/error/exceptions.dart
+lib/core/error/failures.dart
+lib/core/error/result.dart
+Success Criteria
+* [ ] SupabaseService initializes successfully with .env values
+* [ ] Error handling classes defined and usable
+* [ ] Logger outputs to console correctly
+* [ ] StorageService can save and retrieve values
+* [ ] Result class works for success/failure handling
+* [ ] No runtime errors when services instantiated
+
+PHASE 2: AUTHENTICATION
+Step 5: Admin Authentication System
+Objective
+Implement custom JWT-based authentication for admin users using the existing users table with role='Admin'.
+Prerequisites
+* Completed Phase 1 (Steps 1-4)
+* At least one admin user exists in database (create via SQL if needed)
+Claude Prompt
+I need to implement a custom authentication system for admin users in the LoadRunner Admin Dashboard.
+
+IMPORTANT: Admins are stored in the `users` table with `role='Admin'`. There is NO separate admin_users table.
+
+Requirements:
+
+1. Create AdminUser entity and model:
+   - id (UUID)
+   - email
+   - phone_number
+   - first_name, last_name
+   - role (should be 'Admin')
+   - two_factor_enabled
+   - last_login_at
+   - created_at
+
+2. Create AdminSessionService - manages admin authentication state
+   - Login with email/password
+   - Verify user has role='Admin'
+   - Store JWT token in secure storage
+   - Auto-refresh expired tokens
+   - Logout and clear session
+   - Stream for auth state changes
+   - Check if authenticated
+   - Get current admin user
+
+3. Create Supabase Edge Function for admin login:
+   - Endpoint: POST /admin/login
+   - Verify credentials against users table WHERE role='Admin'
+   - Check account not suspended (is_suspended = false)
+   - Check account not locked (locked_until < now or null)
+   - Update failed_login_attempts on failure
+   - Lock account after 5 failed attempts
+   - Return JWT token with admin claims on success
+   - Update last_login_at and last_login_ip
+   - Log login action to admin_audit_logs
+
+4. Create AdminAuthRepository
+   - Interface (domain layer)
+   - Implementation (data layer)
+   - Calls Supabase Edge Function
+   - Handles token storage
+
+5. Create Riverpod providers for dependency injection
+
+File structure:
+lib/features/auth/
+??? data/
+?   ??? repositories/
+?   ?   ??? admin_auth_repository_impl.dart
+?   ??? models/
+?       ??? admin_user_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? admin_user.dart
+?   ??? repositories/
+?       ??? admin_auth_repository.dart
+??? presentation/
+    ??? providers/
+        ??? auth_providers.dart
+
+lib/core/services/
+??? admin_session_service.dart
+
+supabase/functions/
+??? admin-login/
+    ??? index.ts
+
+SQL to create test admin user:
+INSERT INTO users (id, email, phone_number, first_name, last_name, role, created_at)
+VALUES (gen_random_uuid(), 'admin@loadrunner.co.za', '+27123456789', 'Admin', 'User', 'Admin', NOW());
+Files to Create
+lib/features/auth/data/repositories/admin_auth_repository_impl.dart
+lib/features/auth/data/models/admin_user_model.dart
+lib/features/auth/domain/entities/admin_user.dart
+lib/features/auth/domain/repositories/admin_auth_repository.dart
+lib/features/auth/presentation/providers/auth_providers.dart
+lib/core/services/admin_session_service.dart
+supabase/functions/admin-login/index.ts
+Success Criteria
+* [ ] AdminSessionService can store and retrieve auth state
+* [ ] Edge function deploys successfully to Supabase
+* [ ] Can login with test admin credentials
+* [ ] Non-admin users cannot login (role check works)
+* [ ] Suspended admins cannot login
+* [ ] JWT token stored in secure storage
+* [ ] Auth state stream emits correctly
+* [ ] Can logout and clear session
+* [ ] Login attempt tracking works
+* [ ] Account locks after 5 failed attempts
+
+Step 6: Login Screen & 2FA
+Objective
+Create the login UI with email/password and two-factor authentication support.
+Prerequisites
+* Completed Step 5
+Claude Prompt
+I need to create the login screen for the LoadRunner Admin Dashboard with two-factor authentication support.
+
+Requirements:
+
+1. LoginScreen - Main login UI
+   - Email input field with validation
+   - Password input field with visibility toggle
+   - "Login" button
+   - Loading state during authentication
+   - Error message display (invalid credentials, account locked, suspended)
+   - Responsive layout for different screen sizes
+   - Match LoadRunner brand styling (orange primary color)
+
+2. TwoFactorScreen - 2FA verification
+   - 6-digit code input (auto-advance between fields)
+   - Resend code button with cooldown timer
+   - Timer for code expiry (5 minutes)
+   - Verify button
+   - Back button to login
+
+3. LoginController (StateNotifier)
+   - Handle login logic
+   - Form validation
+   - Error handling with specific messages
+   - Navigation after successful login
+   - Handle 2FA flow if enabled
+
+4. Create auth_providers.dart with login controller provider
+
+File structure:
+lib/features/auth/presentation/
+??? screens/
+?   ??? login_screen.dart
+?   ??? two_factor_screen.dart
+??? widgets/
+?   ??? login_form.dart
+?   ??? otp_input.dart
+??? controllers/
+    ??? login_controller.dart
+
+Use Material 3 design and ensure:
+- Proper error handling (network errors, invalid credentials, locked account)
+- Loading indicators
+- Keyboard handling (auto-focus, submit on enter)
+- Secure password input
+Files to Create
+lib/features/auth/presentation/screens/login_screen.dart
+lib/features/auth/presentation/screens/two_factor_screen.dart
+lib/features/auth/presentation/controllers/login_controller.dart
+lib/features/auth/presentation/widgets/login_form.dart
+lib/features/auth/presentation/widgets/otp_input.dart
+Success Criteria
+* [ ] Login screen displays correctly
+* [ ] Form validation works (email format, required fields)
+* [ ] Login button triggers authentication
+* [ ] Loading state shows during API call
+* [ ] Error messages display properly (specific to error type)
+* [ ] Successful login navigates to dashboard
+* [ ] Invalid credentials show error message
+* [ ] Locked account shows appropriate message
+* [ ] App remembers login state after restart
+* [ ] 2FA screen works when enabled
+
+Step 7: Session Management
+Objective
+Implement session persistence, auto-refresh, and logout functionality.
+Prerequisites
+* Completed Steps 5-6
+Claude Prompt
+I need to implement robust session management for the LoadRunner Admin Dashboard.
+
+Requirements:
+
+1. Enhance AdminSessionService:
+   - Auto-refresh JWT tokens before expiry
+   - Persist session across app restarts
+   - Handle token expiry gracefully
+   - Detect and handle session invalidation
+   - Provide session timeout (30 minutes inactivity)
+   - Track last activity time
+
+2. Create JwtInterceptor for Dio:
+   - Add JWT token to all API requests
+   - Handle 401 responses
+   - Automatically refresh token and retry request
+   - Logout if refresh fails
+
+3. Create ApiClient - Configured Dio instance:
+   - Base URL configuration
+   - JWT interceptor
+   - Error handling interceptor
+   - Logging interceptor (debug mode)
+   - Timeout configuration
+
+4. Update main.dart to:
+   - Check session on app start
+   - Navigate to login or dashboard based on auth state
+   - Handle session expiry during app use
+
+5. Create logout functionality:
+   - Clear secure storage
+   - Reset session state
+   - Navigate to login screen
+   - Record logout in audit log
+   - Clear any cached data
+
+6. Create Supabase Edge Function for token refresh:
+   - POST /admin/refresh-token
+   - Validate current token
+   - Return new token pair
+
+File structure:
+lib/core/services/
+??? admin_session_service.dart (MODIFY)
+??? api_client.dart
+??? jwt_interceptor.dart
+
+lib/main.dart (MODIFY)
+
+supabase/functions/
+??? admin-refresh-token/index.ts
+Files to Create/Modify
+lib/core/services/jwt_interceptor.dart (CREATE)
+lib/core/services/api_client.dart (CREATE)
+lib/core/services/admin_session_service.dart (MODIFY)
+lib/main.dart (MODIFY)
+supabase/functions/admin-refresh-token/index.ts (CREATE)
+Success Criteria
+* [ ] Session persists across app restarts
+* [ ] Token auto-refresh works before expiry
+* [ ] 401 responses trigger token refresh
+* [ ] Failed refresh logs user out
+* [ ] Inactivity timeout works (30 minutes)
+* [ ] Logout clears all session data
+* [ ] Logout records audit log
+* [ ] API client adds auth headers to all requests
+* [ ] App starts on correct screen based on auth state
+
+PHASE 3: APP SHELL & NAVIGATION
+Step 8: Main Navigation Structure
+Objective
+Create the main app navigation with bottom navigation bar and screen structure.
+Prerequisites
+* Completed Phase 2
+Claude Prompt
+I need to create the main navigation structure for the LoadRunner Admin Dashboard.
+
+Requirements:
+
+1. Create bottom navigation with 5 tabs:
+   - Home (Dashboard icon) - Dashboard overview
+   - Users (People icon) - Driver/Shipper management
+   - Payments (Credit card icon) - Transactions
+   - Messages (Mail icon) - Communication
+   - More (Menu icon) - Settings, analytics, etc.
+
+2. Set up GoRouter configuration:
+   - Auth guard (redirect to login if not authenticated)
+   - Bottom navigation shell route
+   - Nested routes for each feature
+   - Deep linking support
+
+3. Create placeholder screens for each tab:
+   - DashboardScreen
+   - UsersScreen
+   - PaymentsScreen
+   - MessagesScreen
+   - MoreScreen
+
+4. Create MainScaffold widget:
+   - Bottom navigation bar
+   - Persistent navigation state
+   - AppBar with title based on current route
+   - Optional FAB
+
+5. Handle navigation state:
+   - Tab persistence (don't rebuild when switching)
+   - Back button handling
+   - Nested navigation within tabs
+
+File structure:
+lib/core/navigation/
+??? app_router.dart
+??? route_names.dart
+
+lib/core/components/
+??? main_scaffold.dart
+
+lib/features/dashboard/presentation/screens/dashboard_screen.dart
+lib/features/users/presentation/screens/users_screen.dart
+lib/features/payments/presentation/screens/payments_screen.dart
+lib/features/messages/presentation/screens/messages_screen.dart
+lib/features/more/presentation/screens/more_screen.dart
+Files to Create
+lib/core/navigation/app_router.dart
+lib/core/navigation/route_names.dart
+lib/core/components/main_scaffold.dart
+lib/features/dashboard/presentation/screens/dashboard_screen.dart
+lib/features/users/presentation/screens/users_screen.dart
+lib/features/payments/presentation/screens/payments_screen.dart
+lib/features/messages/presentation/screens/messages_screen.dart
+lib/features/more/presentation/screens/more_screen.dart
+Success Criteria
+* [ ] Bottom navigation displays all 5 tabs
+* [ ] Tapping tabs switches screens
+* [ ] Tab state persists (doesn't rebuild unnecessarily)
+* [ ] AppBar title updates based on current tab
+* [ ] Unauthenticated users redirected to login
+* [ ] Deep links work correctly
+* [ ] Back button behaves properly
+* [ ] GoRouter properly configured
+
+Step 9: Theme & Design System
+Objective
+Implement consistent theming and reusable UI components matching LoadRunner brand.
+Prerequisites
+* Completed Step 8
+Claude Prompt
+I need to create a comprehensive theme and design system for the LoadRunner Admin Dashboard.
+
+LoadRunner Brand Colors (from style-guide.md):
+- Primary: Orange (#FF6B00 or similar)
+- Secondary: Dark blue/navy
+- Success: Green
+- Error: Red
+- Warning: Amber
+- Info: Blue
+
+Requirements:
+
+1. Create AppTheme with Material 3:
+   - Light and dark mode support
+   - LoadRunner brand colors
+   - Typography scale (headline, body, label)
+   - Component themes (buttons, cards, inputs, chips, etc.)
+   - Consistent spacing and sizing
+
+2. Create reusable UI components:
+   - StatCard - Display metric with icon, title, value, trend indicator
+   - CustomButton - Primary, secondary, outline, text variants
+   - CustomTextField - Form input with validation styling
+   - LoadingIndicator - Consistent loading states
+   - ErrorDisplay - Error message with retry button
+   - EmptyState - Empty list placeholder with icon and message
+   - ConfirmDialog - Confirmation dialogs with destructive option
+   - InfoCard - Information display card
+   - StatusBadge - Status indicator (pending, approved, rejected, etc.)
+   - SearchBar - Consistent search input
+
+3. Create color constants and text styles
+4. Create spacing and sizing constants
+5. Create icon constants
+
+File structure:
+lib/core/theme/
+??? app_theme.dart
+??? app_colors.dart
+??? app_text_styles.dart
+??? app_dimensions.dart
+
+lib/core/components/
+??? stat_card.dart
+??? custom_button.dart
+??? custom_text_field.dart
+??? loading_indicator.dart
+??? error_display.dart
+??? empty_state.dart
+??? confirm_dialog.dart
+??? info_card.dart
+??? status_badge.dart
+??? search_bar.dart
+Files to Create
+lib/core/theme/app_theme.dart
+lib/core/theme/app_colors.dart
+lib/core/theme/app_text_styles.dart
+lib/core/theme/app_dimensions.dart
+lib/core/components/stat_card.dart
+lib/core/components/custom_button.dart
+lib/core/components/custom_text_field.dart
+lib/core/components/loading_indicator.dart
+lib/core/components/error_display.dart
+lib/core/components/empty_state.dart
+lib/core/components/confirm_dialog.dart
+lib/core/components/info_card.dart
+lib/core/components/status_badge.dart
+lib/core/components/search_bar.dart
+Success Criteria
+* [ ] Theme applied throughout app
+* [ ] Light and dark modes work
+* [ ] All components render correctly
+* [ ] Brand colors match LoadRunner style guide
+* [ ] Typography is consistent
+* [ ] Components are reusable across features
+* [ ] No hardcoded colors or sizes in widgets
+* [ ] StatusBadge shows correct colors for each status
+
+Step 10: Dashboard Home Screen
+Objective
+Create the dashboard home screen with overview statistics and quick actions.
+Prerequisites
+* Completed Steps 8-9
+Claude Prompt
+I need to create the Dashboard home screen showing key metrics and quick actions.
+
+Requirements:
+
+1. DashboardScreen with sections:
+   - Welcome header with admin name and date
+   - Today's Highlights (6 stat cards in grid):
+     * Active shipments (from freight_posts where status IN ('Bidding', 'Pickup', 'OnRoute'))
+     * Pending driver approvals (from users where role='Driver' AND driver_verification_status='pending')
+     * New registrations today (users created today)
+     * Active users (last 24h based on last_login_at)
+     * Revenue today (from payments)
+     * Pending disputes (from disputes where status IN ('open', 'under_review'))
+   - Quick Actions (4 buttons):
+     * Review pending drivers ? Navigate to drivers list (pending tab)
+     * View active shipments ? Navigate to shipments (future feature or external link)
+     * Handle disputes ? Navigate to disputes list
+     * Send announcement ? Navigate to compose broadcast message
+   - Pull-to-refresh functionality
+
+2. Create DashboardRepository to fetch stats from Supabase:
+   - Use the get_admin_dashboard_stats() function created in migration
+   - Or direct queries with proper joins
+
+3. Create DashboardController (StateNotifier):
+   - Load dashboard stats
+   - Handle refresh
+   - Error handling
+   - Loading states
+
+4. Create DashboardStats entity:
+   - total_drivers, pending_driver_approvals
+   - total_shippers
+   - active_shipments
+   - open_disputes
+   - pending_bank_verifications
+   - pending_document_verifications
+   - revenue_today, revenue_change_percent
+
+File structure:
+lib/features/dashboard/
+??? data/
+?   ??? repositories/
+?   ?   ??? dashboard_repository_impl.dart
+?   ??? models/
+?       ??? dashboard_stats_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? dashboard_stats.dart
+?   ??? repositories/
+?       ??? dashboard_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? dashboard_screen.dart
+    ??? controllers/
+    ?   ??? dashboard_controller.dart
+    ??? providers/
+    ?   ??? dashboard_providers.dart
+    ??? widgets/
+        ??? stat_cards_grid.dart
+        ??? quick_actions_section.dart
+        ??? welcome_header.dart
+
+Use the StatCard component created in Step 9.
+Files to Create
+lib/features/dashboard/data/repositories/dashboard_repository_impl.dart
+lib/features/dashboard/data/models/dashboard_stats_model.dart
+lib/features/dashboard/domain/entities/dashboard_stats.dart
+lib/features/dashboard/domain/repositories/dashboard_repository.dart
+lib/features/dashboard/presentation/screens/dashboard_screen.dart (MODIFY)
+lib/features/dashboard/presentation/controllers/dashboard_controller.dart
+lib/features/dashboard/presentation/providers/dashboard_providers.dart
+lib/features/dashboard/presentation/widgets/stat_cards_grid.dart
+lib/features/dashboard/presentation/widgets/quick_actions_section.dart
+lib/features/dashboard/presentation/widgets/welcome_header.dart
+Success Criteria
+* [ ] Dashboard displays all 6 stat cards
+* [ ] Stats load from Supabase correctly
+* [ ] Loading indicator shows while fetching
+* [ ] Pull-to-refresh works
+* [ ] Quick action buttons navigate correctly
+* [ ] Error states handled gracefully
+* [ ] Admin name displays in welcome header
+* [ ] Stats refresh correctly
+
+PHASE 4: USER MANAGEMENT - DRIVERS
+Step 11: Driver List & Filtering
+Objective
+Create the driver list screen with filtering, searching, and status badges.
+Prerequisites
+* Completed Phase 3 (Steps 8-10)
+Claude Prompt
+I need to create a comprehensive driver list screen with filtering, searching, and status management.
+
+IMPORTANT: Drivers are stored in the `users` table with `role='Driver'`. There is NO separate drivers table.
+
+Requirements:
+
+1. DriversListScreen:
+   - Tabbed interface:
+     * Pending Approval (with count badge) - driver_verification_status = 'pending'
+     * Approved - driver_verification_status = 'approved'
+     * Rejected - driver_verification_status = 'rejected'
+     * All Drivers
+   - Search bar (search by first_name, last_name, phone_number, email)
+   - Filter options:
+     * Verification status (using verification_status enum)
+     * Registration date range
+     * Suspended status
+   - Driver list items showing:
+     * Profile photo (profile_photo_url or default avatar)
+     * Full name (first_name + last_name)
+     * Phone number
+     * Registration date (created_at)
+     * Status badge (pending/approved/rejected/documents_requested)
+     * Suspended indicator if is_suspended = true
+   - Pull-to-refresh
+   - Infinite scroll/pagination
+
+2. Create DriversRepository:
+   - Query: SELECT * FROM users WHERE role = 'Driver' ...
+   - Fetch drivers with filters and search
+   - Pagination support (limit/offset)
+   - Real-time updates (Supabase subscriptions)
+   - Get driver count by verification status
+
+3. Create DriversListController (StateNotifier):
+   - Load drivers with filters
+   - Handle search (debounced)
+   - Handle tab switching
+   - Pagination logic
+   - Loading and error states
+
+4. Create FilterSheet bottom sheet widget:
+   - Verification status checkboxes (all enum values)
+   - Date range picker
+   - Suspended toggle
+   - Apply/Reset buttons
+
+File structure:
+lib/features/users/
+??? data/
+?   ??? repositories/
+?   ?   ??? drivers_repository_impl.dart
+?   ??? models/
+?       ??? driver_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? driver.dart
+?   ??? repositories/
+?       ??? drivers_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? drivers_list_screen.dart
+    ??? controllers/
+    ?   ??? drivers_list_controller.dart
+    ??? providers/
+    ?   ??? drivers_providers.dart
+    ??? widgets/
+        ??? driver_list_item.dart
+        ??? driver_filter_sheet.dart
+        ??? verification_status_badge.dart
+Files to Create
+lib/features/users/data/repositories/drivers_repository_impl.dart
+lib/features/users/data/models/driver_model.dart
+lib/features/users/domain/entities/driver.dart
+lib/features/users/domain/repositories/drivers_repository.dart
+lib/features/users/presentation/screens/drivers_list_screen.dart
+lib/features/users/presentation/controllers/drivers_list_controller.dart
+lib/features/users/presentation/providers/drivers_providers.dart
+lib/features/users/presentation/widgets/driver_list_item.dart
+lib/features/users/presentation/widgets/driver_filter_sheet.dart
+lib/features/users/presentation/widgets/verification_status_badge.dart
+Success Criteria
+* [ ] Driver list displays with correct data from users table
+* [ ] Tabs show accurate counts
+* [ ] Search filters results correctly
+* [ ] Filters work (status, date, suspended)
+* [ ] Pagination loads more drivers on scroll
+* [ ] Pull-to-refresh updates list
+* [ ] Tapping driver navigates to details
+* [ ] Status badges show correct colors for each verification_status
+* [ ] Performance is smooth with large lists
+* [ ] Suspended drivers show indicator
+
+Step 12: Driver Profile View
+Objective
+Create the driver profile detail screen showing all driver and vehicle information.
+Prerequisites
+* Completed Step 11
+Claude Prompt
+I need to create a comprehensive driver profile view screen.
+
+IMPORTANT DATABASE STRUCTURE:
+- Driver info: users table WHERE role='Driver'
+- Driver documents: driver_docs table (JOIN on driver_id = users.id)
+- Driver vehicles: vehicles table (JOIN on driver_id = users.id)
+- Driver bank account: driver_bank_accounts table (JOIN on driver_id = users.id)
+- Approval history: driver_approval_history table (JOIN on driver_id = users.id)
+
+Requirements:
+
+1. DriverProfileScreen with sections:
+   - Header with profile photo, full name, verification status badge
+   - Personal Information card:
+     * Full name, email, phone number
+     * Address (if available)
+     * Registration date (created_at)
+     * Last login (last_login_at)
+     * driver_verified_at (if approved)
+   - Documents section (from driver_docs table):
+     * List documents by doc_type
+     * Common doc_types: 'driver_license_front', 'driver_license_back', 'id_document', 'proof_of_address', 'police_clearance', 'profile_photo'
+     * Show verification_status for each document
+     * Tap to view full screen
+   - Vehicles section (from vehicles table):
+     * List all vehicles for this driver
+     * Each vehicle as expandable card showing: make, model, license_plate, capacity_tons, color
+     * Vehicle verification_status
+     * Vehicle documents (registration_document_url, insurance_document_url, photo_url)
+   - Bank Account section (from driver_bank_accounts):
+     * Bank name, account number (masked)
+     * is_verified status
+     * verification_method
+   - Approval History section (from driver_approval_history):
+     * Timeline of all approval actions
+     * performed_by admin name
+     * Action type, status, reason
+     * requested_documents if applicable
+   - Action buttons at bottom:
+     * Approve (if pending)
+     * Reject (if pending)
+     * Request Documents
+     * Suspend/Unsuspend
+     * Edit Information
+
+2. Create DriverProfileRepository:
+   - Fetch complete driver profile with joins
+   - Fetch driver vehicles
+   - Fetch driver documents
+   - Fetch approval history
+   - Fetch bank account info
+
+3. Create DriverProfileController:
+   - Load driver profile
+   - Handle refresh
+   - Navigation to document viewer
+   - Navigation to approval actions
+
+File structure:
+lib/features/users/presentation/
+??? screens/
+?   ??? driver_profile_screen.dart
+??? controllers/
+?   ??? driver_profile_controller.dart
+??? widgets/
+    ??? driver_profile_header.dart
+    ??? personal_info_card.dart
+    ??? documents_section.dart
+    ??? vehicle_card.dart
+    ??? bank_account_card.dart
+    ??? approval_history_timeline.dart
+    ??? driver_action_buttons.dart
+Files to Create
+lib/features/users/presentation/screens/driver_profile_screen.dart
+lib/features/users/presentation/controllers/driver_profile_controller.dart
+lib/features/users/presentation/widgets/driver_profile_header.dart
+lib/features/users/presentation/widgets/personal_info_card.dart
+lib/features/users/presentation/widgets/documents_section.dart
+lib/features/users/presentation/widgets/vehicle_card.dart
+lib/features/users/presentation/widgets/bank_account_card.dart
+lib/features/users/presentation/widgets/approval_history_timeline.dart
+lib/features/users/presentation/widgets/driver_action_buttons.dart
+Success Criteria
+* [ ] Profile screen displays all driver information
+* [ ] Documents section shows all doc_types with status
+* [ ] Vehicles listed with all details
+* [ ] Bank account shows masked number
+* [ ] Approval history displays chronologically
+* [ ] Action buttons show based on current status
+* [ ] Tapping documents opens viewer
+* [ ] Loading states handle properly
+* [ ] Back navigation works
+* [ ] Suspended status shown if applicable
+
+Step 13: Document Viewer Component
+Objective
+Create a full-screen image viewer with zoom, pan, and download capabilities.
+Prerequisites
+* Completed Step 12
+Claude Prompt
+I need to create a full-screen document viewer component for reviewing driver documents.
+
+Requirements:
+
+1. DocumentViewerScreen:
+   - Full-screen photo viewer with:
+     * Pinch to zoom
+     * Pan when zoomed
+     * Double-tap to zoom
+     * Swipe to navigate between documents
+     * Page indicator (e.g., "2 / 5")
+   - AppBar with:
+     * Document type as title (e.g., "Driver License Front")
+     * Download button
+     * Close button
+   - Bottom toolbar with:
+     * Approve document button
+     * Reject document button (opens reason dialog)
+     * Flag/Report button (for quality issues)
+   - Loading state while image loads
+   - Error state if image fails to load
+   - Support for network images from Supabase Storage
+
+2. Handle document verification inline:
+   - Approve: Updates driver_docs.verification_status = 'approved'
+   - Reject: Updates driver_docs.verification_status = 'rejected' with rejection_reason
+   - Records verified_by and verified_at
+
+3. Create DocumentViewerController:
+   - Manage current page
+   - Handle download to device
+   - Handle approve/reject
+   - Handle flag/report
+
+4. RejectDocumentDialog:
+   - Reason selection (blurry, expired, wrong document, other)
+   - Notes field
+   - Reject button
+
+File structure:
+lib/core/components/
+??? document_viewer_screen.dart
+??? document_viewer_controller.dart
+
+lib/features/users/presentation/widgets/
+??? reject_document_dialog.dart
+
+Use photo_view package for zoom/pan functionality.
+Use cached_network_image for efficient image loading.
+Files to Create
+lib/core/components/document_viewer_screen.dart
+lib/core/components/document_viewer_controller.dart
+lib/features/users/presentation/widgets/reject_document_dialog.dart
+Success Criteria
+* [ ] Document opens in full screen
+* [ ] Can zoom in/out smoothly
+* [ ] Can pan when zoomed
+* [ ] Swipe navigates between documents
+* [ ] Download saves image to device
+* [ ] Approve updates document status in database
+* [ ] Reject opens dialog and updates status with reason
+* [ ] Loading indicator shows while loading
+* [ ] Error message shows if load fails
+* [ ] Works with Supabase Storage URLs
+
+Step 14: Approval Workflow
+Objective
+Implement driver approval, rejection, and document request workflows.
+Prerequisites
+* Completed Steps 11-13
+Claude Prompt
+I need to implement the complete driver approval workflow.
+
+IMPORTANT DATABASE OPERATIONS:
+- Approve: UPDATE users SET driver_verification_status='approved', driver_verified_at=NOW(), driver_verified_by=:admin_id WHERE id=:driver_id
+- Reject: UPDATE users SET driver_verification_status='rejected', driver_rejection_reason=:reason WHERE id=:driver_id
+- Request docs: UPDATE users SET driver_verification_status='documents_requested' WHERE id=:driver_id
+- All actions: INSERT INTO driver_approval_history (...)
+- All actions: INSERT INTO admin_audit_logs (...)
+
+Requirements:
+
+1. ApproveDriverDialog:
+   - Confirmation message showing driver name
+   - Optional notes field for admin
+   - Approve button (triggers approval)
+   - Shows what will happen (driver will be notified, account activated)
+
+2. RejectDriverDialog:
+   - Reason selection (radio buttons):
+     * Invalid/expired documents
+     * Poor document quality
+     * Vehicle doesn't meet requirements
+     * Incomplete information
+     * Fraudulent information
+     * Other (with text field)
+   - Required notes field for details
+   - Reject button
+
+3. RequestDocumentsDialog:
+   - Checklist of document types:
+     * Driver's license (front)
+     * Driver's license (back)
+     * ID document
+     * Proof of address
+     * Police clearance
+     * Profile photo
+     * Vehicle registration
+     * Vehicle insurance
+     * Vehicle photos
+   - Custom message field for driver
+   - Send button
+
+4. Create DriverApprovalRepository:
+   - Approve driver (update users, insert history, insert audit, send notification)
+   - Reject driver (update users, insert history, insert audit, send notification)
+   - Request additional documents (update users, insert history with requested_documents JSONB, send notification)
+
+5. Create Supabase Edge Functions:
+   - approve-driver: Handles approval + notification
+   - reject-driver: Handles rejection + notification
+   - request-driver-documents: Handles request + notification
+
+File structure:
+lib/features/users/presentation/widgets/
+??? approve_driver_dialog.dart
+??? reject_driver_dialog.dart
+??? request_documents_dialog.dart
+
+lib/features/users/data/repositories/
+??? driver_approval_repository_impl.dart
+
+lib/features/users/domain/repositories/
+??? driver_approval_repository.dart
+
+supabase/functions/
+??? approve-driver/index.ts
+??? reject-driver/index.ts
+??? request-driver-documents/index.ts
+Files to Create
+lib/features/users/presentation/widgets/approve_driver_dialog.dart
+lib/features/users/presentation/widgets/reject_driver_dialog.dart
+lib/features/users/presentation/widgets/request_documents_dialog.dart
+lib/features/users/data/repositories/driver_approval_repository_impl.dart
+lib/features/users/domain/repositories/driver_approval_repository.dart
+supabase/functions/approve-driver/index.ts
+supabase/functions/reject-driver/index.ts
+supabase/functions/request-driver-documents/index.ts
+Success Criteria
+* [ ] Approve dialog shows and works
+* [ ] Reject dialog requires reason selection
+* [ ] Request documents shows all document types
+* [ ] Approval updates users.driver_verification_status to 'approved'
+* [ ] Approval sets driver_verified_at and driver_verified_by
+* [ ] Rejection updates status to 'rejected' with reason
+* [ ] Document request updates status to 'documents_requested'
+* [ ] All actions create driver_approval_history record
+* [ ] All actions create admin_audit_logs record
+* [ ] Notifications sent to driver (via existing notification system)
+* [ ] Driver list refreshes after action
+
+Step 15: Vehicle Management
+Objective
+Create vehicle viewing and verification functionality within driver profiles.
+Prerequisites
+* Completed Steps 11-14
+Claude Prompt
+I need to create vehicle management functionality for the admin dashboard.
+
+Requirements:
+
+1. VehicleDetailScreen (accessed from driver profile):
+   - Vehicle information card:
+     * Type, make, model, color
+     * License plate
+     * Capacity (tons)
+     * Verification status badge
+   - Vehicle photos section:
+     * Main photo (photo_url)
+     * Additional photos (additional_photos JSONB array)
+     * Tap to view full screen
+   - Vehicle documents section:
+     * Registration document (registration_document_url)
+     * Insurance document (insurance_document_url)
+     * Verification status for each
+   - Action buttons:
+     * Approve vehicle
+     * Reject vehicle
+     * Request documents
+
+2. VehicleApprovalRepository:
+   - Approve vehicle: UPDATE vehicles SET verification_status='approved', verified_at=NOW(), verified_by=:admin_id
+   - Reject vehicle: UPDATE vehicles SET verification_status='rejected', rejection_reason=:reason
+   - Record in admin_audit_logs
+
+3. Dialogs:
+   - ApproveVehicleDialog
+   - RejectVehicleDialog (with reason)
+
+File structure:
+lib/features/users/presentation/
+??? screens/
+?   ??? vehicle_detail_screen.dart
+??? controllers/
+?   ??? vehicle_detail_controller.dart
+??? widgets/
+    ??? vehicle_info_card.dart
+    ??? vehicle_photos_gallery.dart
+    ??? vehicle_documents_section.dart
+    ??? approve_vehicle_dialog.dart
+    ??? reject_vehicle_dialog.dart
+
+lib/features/users/data/repositories/
+??? vehicle_repository_impl.dart
+Files to Create
+lib/features/users/presentation/screens/vehicle_detail_screen.dart
+lib/features/users/presentation/controllers/vehicle_detail_controller.dart
+lib/features/users/presentation/widgets/vehicle_info_card.dart
+lib/features/users/presentation/widgets/vehicle_photos_gallery.dart
+lib/features/users/presentation/widgets/vehicle_documents_section.dart
+lib/features/users/presentation/widgets/approve_vehicle_dialog.dart
+lib/features/users/presentation/widgets/reject_vehicle_dialog.dart
+lib/features/users/data/repositories/vehicle_repository_impl.dart
+Success Criteria
+* [ ] Vehicle detail screen shows all information
+* [ ] Photos display in gallery
+* [ ] Documents show with verification status
+* [ ] Can approve vehicle
+* [ ] Can reject vehicle with reason
+* [ ] Actions recorded in audit log
+* [ ] Status updates reflect in UI
+* [ ] Back navigation returns to driver profile
+
+PHASE 5: STATISTICS & ANALYTICS
+Step 16: Dashboard Overview Stats
+Objective
+Enhance dashboard with trend indicators, real-time updates, and mini charts.
+Prerequisites
+* Completed Phase 4
+Claude Prompt
+I need to enhance the dashboard stats with trends, comparisons, and real-time updates.
+
+Requirements:
+
+1. Enhanced StatCard component:
+   - Current value (large)
+   - Comparison value (e.g., "vs yesterday", "vs last week")
+   - Trend indicator (up/down arrow with percentage)
+   - Color coding (green for positive, red for negative)
+   - Loading skeleton state
+   - Optional sparkline chart
+
+2. Create Supabase RPC functions for efficient stat calculations:
+   - get_admin_dashboard_stats() - Returns all stats with comparisons
+     * active_shipments (current count)
+     * pending_drivers (current count)
+     * new_registrations_today (count, vs yesterday)
+     * active_users_24h (count, vs previous 24h)
+     * revenue_today (amount, vs yesterday)
+     * pending_disputes (count)
+     * Each with trend percentage
+
+3. Implement real-time updates:
+   - Supabase Realtime subscriptions on relevant tables
+   - Auto-refresh stats every 60 seconds
+   - Show "Updated X minutes ago" timestamp
+
+4. Create mini chart widgets:
+   - RegistrationsTrendChart (last 7 days sparkline)
+   - RevenueTrendChart (last 7 days sparkline)
+
+File structure:
+lib/features/dashboard/presentation/widgets/
+??? enhanced_stat_card.dart
+??? registrations_sparkline.dart
+??? revenue_sparkline.dart
+
+lib/features/dashboard/data/
+??? (update repository with RPC calls)
+
+Use fl_chart package for sparklines.
+Files to Create/Modify
+lib/features/dashboard/presentation/widgets/enhanced_stat_card.dart
+lib/features/dashboard/presentation/widgets/registrations_sparkline.dart
+lib/features/dashboard/presentation/widgets/revenue_sparkline.dart
+lib/features/dashboard/data/repositories/dashboard_repository_impl.dart (MODIFY)
+supabase/migrations/20260119_dashboard_rpc_functions.sql
+Success Criteria
+* [ ] Stats show trend indicators (up/down)
+* [ ] Percentage change displays correctly
+* [ ] Loading skeletons show during fetch
+* [ ] Real-time subscriptions update stats
+* [ ] Sparkline charts display last 7 days
+* [ ] Timestamp shows when last updated
+* [ ] Performance is smooth
+* [ ] RPC functions return data efficiently
+
+Step 17: Activity Metrics
+Objective
+Create detailed activity metrics screen with user and shipment analytics.
+Prerequisites
+* Completed Step 16
+Claude Prompt
+I need to create a comprehensive activity metrics screen showing detailed analytics.
+
+Requirements:
+
+1. ActivityMetricsScreen with tabs:
+   - User Activity
+   - Shipment Activity
+   - Bid Activity
+
+2. User Activity Tab:
+   - Total registered users (drivers count, shippers count)
+   - Active users chart (daily, weekly, monthly)
+   - User retention rate
+   - Inactive users list (no login in 30+ days)
+   - New registrations trend chart
+
+3. Shipment Activity Tab (from freight_posts):
+   - Total shipments (all time, this month, week, today)
+   - Shipments by status (pie chart: Bidding, Pickup, OnRoute, Delivered, Cancelled)
+   - Completion rate
+   - Average shipments per driver/shipper
+   - Popular routes (top 5 origin-destination pairs)
+
+4. Bid Activity Tab:
+   - Total bids placed
+   - Average bids per shipment
+   - Bid acceptance rate
+   - Average time to accept bid
+
+5. Date range selector:
+   - Today, Last 7 days, Last 30 days, This month, Custom range
+
+6. Export data as CSV
+
+File structure:
+lib/features/analytics/
+??? data/
+?   ??? repositories/
+?   ?   ??? activity_metrics_repository_impl.dart
+?   ??? models/
+?       ??? activity_metrics_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? activity_metrics.dart
+?   ??? repositories/
+?       ??? activity_metrics_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? activity_metrics_screen.dart
+    ??? controllers/
+    ?   ??? activity_metrics_controller.dart
+    ??? providers/
+    ?   ??? analytics_providers.dart
+    ??? widgets/
+        ??? user_activity_tab.dart
+        ??? shipment_activity_tab.dart
+        ??? bid_activity_tab.dart
+        ??? date_range_selector.dart
+        ??? export_button.dart
+
+Access from More tab.
+Files to Create
+lib/features/analytics/data/repositories/activity_metrics_repository_impl.dart
+lib/features/analytics/data/models/activity_metrics_model.dart
+lib/features/analytics/domain/entities/activity_metrics.dart
+lib/features/analytics/domain/repositories/activity_metrics_repository.dart
+lib/features/analytics/presentation/screens/activity_metrics_screen.dart
+lib/features/analytics/presentation/controllers/activity_metrics_controller.dart
+lib/features/analytics/presentation/providers/analytics_providers.dart
+lib/features/analytics/presentation/widgets/user_activity_tab.dart
+lib/features/analytics/presentation/widgets/shipment_activity_tab.dart
+lib/features/analytics/presentation/widgets/bid_activity_tab.dart
+lib/features/analytics/presentation/widgets/date_range_selector.dart
+lib/features/analytics/presentation/widgets/export_button.dart
+Success Criteria
+* [ ] Activity metrics screen accessible from More tab
+* [ ] All three tabs display correctly
+* [ ] Charts render with accurate data
+* [ ] Date range selector filters data
+* [ ] Stats update when date range changes
+* [ ] Pie charts show percentages
+* [ ] Line charts show trends
+* [ ] Export to CSV works
+* [ ] Loading states handled
+
+Step 18: Financial Metrics
+Objective
+Create financial metrics and revenue analytics screen.
+Prerequisites
+* Completed Step 17
+Claude Prompt
+I need to create a financial metrics screen showing revenue and payment analytics.
+
+Requirements:
+
+1. FinancialMetricsScreen with sections:
+   - Revenue Overview:
+     * Total revenue (all time)
+     * Revenue this month
+     * Revenue today
+     * Revenue trend chart (last 30 days)
+   
+   - Transaction Volume:
+     * Total transactions processed
+     * Transaction volume chart (daily)
+     * Average transaction value
+     * Transaction success rate
+   
+   - Payment Health:
+     * Success rate gauge
+     * Failed payments count and amount
+     * Outstanding payments to drivers (from driver_payouts)
+     * Refunds issued (from payment_refunds)
+   
+   - Commission Tracking (from commission_ledger):
+     * Platform commission earned
+     * Commission by type (shipper 5%, driver 5%)
+     * Commission trend chart
+   
+   - Top Performers:
+     * Highest earning drivers (table)
+     * Most active shippers (table)
+
+2. All monetary values in ZAR format
+3. Export functionality
+4. Date range filter
+
+File structure:
+lib/features/analytics/presentation/
+??? screens/
+?   ??? financial_metrics_screen.dart
+??? controllers/
+?   ??? financial_metrics_controller.dart
+??? widgets/
+    ??? revenue_overview_card.dart
+    ??? transaction_volume_chart.dart
+    ??? payment_health_section.dart
+    ??? commission_tracking_card.dart
+    ??? top_performers_tables.dart
+
+lib/features/analytics/data/repositories/
+??? financial_metrics_repository_impl.dart
+Files to Create
+lib/features/analytics/presentation/screens/financial_metrics_screen.dart
+lib/features/analytics/presentation/controllers/financial_metrics_controller.dart
+lib/features/analytics/presentation/widgets/revenue_overview_card.dart
+lib/features/analytics/presentation/widgets/transaction_volume_chart.dart
+lib/features/analytics/presentation/widgets/payment_health_section.dart
+lib/features/analytics/presentation/widgets/commission_tracking_card.dart
+lib/features/analytics/presentation/widgets/top_performers_tables.dart
+lib/features/analytics/data/repositories/financial_metrics_repository_impl.dart
+Success Criteria
+* [ ] Financial metrics screen displays all sections
+* [ ] Revenue chart shows accurate data
+* [ ] Transaction volume updates correctly
+* [ ] Payment success rate gauge displays
+* [ ] Commission tracking shows breakdown
+* [ ] Top performers tables are sortable
+* [ ] Export to CSV downloads file
+* [ ] All monetary values formatted as ZAR
+* [ ] Date range filtering works
+
+Step 19: Performance & Growth Metrics
+Objective
+Create performance metrics (ratings, delivery success) and growth analytics screens.
+Prerequisites
+* Completed Step 18
+Claude Prompt
+I need to create Performance Metrics and Growth Metrics screens.
+
+**Performance Metrics Screen:**
+
+1. Driver Performance section:
+   - Average driver rating
+   - Rating distribution chart (5-star breakdown)
+   - Top-rated drivers list
+   - Low-rated drivers alert (< 3 stars)
+   - Delivery success rate
+   - Average response time to bids
+
+2. Shipper Performance section:
+   - Average shipper rating
+   - Payment reliability (based on payment history)
+   - Average time to accept bids
+   - Cancellation rate
+
+3. Platform Health section:
+   - Overall delivery success rate gauge
+   - Average delivery time vs estimated
+   - Issue resolution time (disputes)
+
+**Growth Metrics Screen:**
+
+1. User Growth section:
+   - New registrations chart (daily, weekly, monthly)
+   - Growth rate percentage
+   - Driver vs Shipper ratio (pie chart)
+   - Cumulative users chart
+
+2. Geographic Distribution section:
+   - Users by province (bar chart)
+   - Popular routes (top corridors)
+
+3. Forecasting section:
+   - Projected user growth trend line
+   - Seasonal patterns
+
+File structure:
+lib/features/analytics/presentation/screens/
+??? performance_metrics_screen.dart
+??? growth_metrics_screen.dart
+
+lib/features/analytics/presentation/controllers/
+??? performance_metrics_controller.dart
+??? growth_metrics_controller.dart
+
+lib/features/analytics/presentation/widgets/
+??? rating_distribution_chart.dart
+??? delivery_success_gauge.dart
+??? user_growth_chart.dart
+??? geographic_distribution_chart.dart
+??? growth_forecast_chart.dart
+Files to Create
+lib/features/analytics/presentation/screens/performance_metrics_screen.dart
+lib/features/analytics/presentation/screens/growth_metrics_screen.dart
+lib/features/analytics/presentation/controllers/performance_metrics_controller.dart
+lib/features/analytics/presentation/controllers/growth_metrics_controller.dart
+lib/features/analytics/presentation/widgets/rating_distribution_chart.dart
+lib/features/analytics/presentation/widgets/delivery_success_gauge.dart
+lib/features/analytics/presentation/widgets/user_growth_chart.dart
+lib/features/analytics/presentation/widgets/geographic_distribution_chart.dart
+lib/features/analytics/presentation/widgets/growth_forecast_chart.dart
+lib/features/analytics/data/repositories/performance_metrics_repository_impl.dart
+lib/features/analytics/data/repositories/growth_metrics_repository_impl.dart
+Success Criteria
+* [ ] Performance metrics screen displays all sections
+* [ ] Rating distribution chart accurate
+* [ ] Delivery success gauge shows percentage
+* [ ] Low-rated drivers list updated
+* [ ] Growth metrics screen shows trends
+* [ ] User growth chart displays correctly
+* [ ] Geographic distribution shows all provinces
+* [ ] All charts interactive and responsive
+
+Step 20: Charts & Visualizations
+Objective
+Create reusable chart components for consistent visualization across analytics.
+Prerequisites
+* Completed Steps 16-19
+Claude Prompt
+I need to create reusable, polished chart components for consistent data visualization.
+
+Requirements:
+
+1. Create reusable chart widgets:
+   - LineChartWidget - For trends over time
+   - BarChartWidget - For comparisons
+   - PieChartWidget - For proportions
+   - GaugeChartWidget - For percentages/rates
+   - AreaChartWidget - For cumulative data
+   - SparklineWidget - Small inline trends
+
+2. Chart features:
+   - Interactive tooltips on tap
+   - Legends with toggle visibility
+   - Custom color schemes matching app theme
+   - Loading states
+   - Empty states
+   - Error states
+   - Animations
+
+3. Data formatting utilities:
+   - Currency formatter (ZAR)
+   - Number formatter (1.2K, 1.5M notation)
+   - Percentage formatter
+   - Date formatter
+
+4. Create ChartTheme:
+   - Consistent colors across charts
+   - Grid styles
+   - Axis styles
+   - Tooltip styles
+
+File structure:
+lib/core/components/charts/
+??? line_chart_widget.dart
+??? bar_chart_widget.dart
+??? pie_chart_widget.dart
+??? gauge_chart_widget.dart
+??? area_chart_widget.dart
+??? sparkline_widget.dart
+??? chart_theme.dart
+
+lib/core/utils/
+??? formatters.dart
+
+Refactor existing chart usages to use these reusable components.
+Use fl_chart package.
+Files to Create
+lib/core/components/charts/line_chart_widget.dart
+lib/core/components/charts/bar_chart_widget.dart
+lib/core/components/charts/pie_chart_widget.dart
+lib/core/components/charts/gauge_chart_widget.dart
+lib/core/components/charts/area_chart_widget.dart
+lib/core/components/charts/sparkline_widget.dart
+lib/core/components/charts/chart_theme.dart
+lib/core/utils/formatters.dart
+Success Criteria
+* [ ] All chart widgets render correctly
+* [ ] Charts are interactive (tap for tooltip)
+* [ ] Legends toggle series visibility
+* [ ] Loading states display
+* [ ] Empty states show helpful messages
+* [ ] Charts respect app theme (light/dark)
+* [ ] Currency formatted as ZAR
+* [ ] Large numbers abbreviated (1.2K, 1M)
+* [ ] Charts responsive to screen size
+* [ ] All existing charts refactored to use components
+
+PHASE 6: PAYMENT MANAGEMENT
+Step 21: Transactions List
+Objective
+Create transactions list screen with advanced filtering and search.
+Prerequisites
+* Completed Phase 5
+Claude Prompt
+I need to create a comprehensive transactions list screen.
+
+Data sources:
+- payments table
+- escrow_holdings table
+- driver_payouts table
+- payment_refunds table
+
+Requirements:
+
+1. TransactionsListScreen:
+   - List view showing all transactions:
+     * Transaction ID
+     * Date and time
+     * User (driver/shipper) with avatar
+     * Shipment reference (freight_post_id, clickable)
+     * Amount (color-coded by status)
+     * Status badge (pending, completed, failed, refunded)
+     * Payment method
+
+   - Filter panel:
+     * Date range picker
+     * User type (driver/shipper/all)
+     * Status
+     * Amount range
+     * Payment type (payment, payout, refund)
+
+   - Search bar (transaction ID, user name, shipment ID)
+
+   - Summary card:
+     * Total transactions (count)
+     * Total amount
+     * Success rate
+
+   - Pull-to-refresh
+   - Infinite scroll pagination
+   - Export to CSV
+
+2. Create TransactionsRepository:
+   - Fetch transactions with filters
+   - Support pagination
+   - Search functionality
+   - Get transaction summary stats
+
+File structure:
+lib/features/payments/
+??? data/
+?   ??? repositories/
+?   ?   ??? transactions_repository_impl.dart
+?   ??? models/
+?       ??? transaction_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? transaction.dart
+?   ??? repositories/
+?       ??? transactions_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? transactions_list_screen.dart
+    ??? controllers/
+    ?   ??? transactions_controller.dart
+    ??? providers/
+    ?   ??? payments_providers.dart
+    ??? widgets/
+        ??? transaction_list_item.dart
+        ??? transaction_filter_sheet.dart
+        ??? transactions_summary_card.dart
+Files to Create
+lib/features/payments/data/repositories/transactions_repository_impl.dart
+lib/features/payments/data/models/transaction_model.dart
+lib/features/payments/domain/entities/transaction.dart
+lib/features/payments/domain/repositories/transactions_repository.dart
+lib/features/payments/presentation/screens/transactions_list_screen.dart
+lib/features/payments/presentation/controllers/transactions_controller.dart
+lib/features/payments/presentation/providers/payments_providers.dart
+lib/features/payments/presentation/widgets/transaction_list_item.dart
+lib/features/payments/presentation/widgets/transaction_filter_sheet.dart
+lib/features/payments/presentation/widgets/transactions_summary_card.dart
+Success Criteria
+* [ ] Transactions list displays correctly
+* [ ] Filters work (date, type, status, amount)
+* [ ] Search finds transactions
+* [ ] Pagination loads more
+* [ ] Tapping transaction opens details
+* [ ] Summary card shows accurate totals
+* [ ] Export to CSV works
+* [ ] Amount formatted as ZAR
+* [ ] Status badges color-coded
+
+Step 22: Transaction Details & Refunds
+Objective
+Create transaction detail screen with refund processing capability.
+Prerequisites
+* Completed Step 21
+Claude Prompt
+I need to create a transaction detail screen with refund processing.
+
+Requirements:
+
+1. TransactionDetailScreen:
+   - Transaction information card:
+     * Transaction ID
+     * Status with badge
+     * Amount (formatted ZAR)
+     * Date and time
+     * Payment method
+   
+   - User information card:
+     * User name, photo, role
+     * Phone number
+     * Link to user profile
+   
+   - Shipment information card (if applicable):
+     * Shipment ID (link to view)
+     * Pickup and delivery locations
+     * Bid amount
+   
+   - Transaction timeline:
+     * Created
+     * Processing
+     * Completed/Failed
+     * Refunded (if applicable)
+   
+   - Related transactions (refunds, adjustments)
+   
+   - Action buttons:
+     * Process Refund (if completed)
+     * Retry Payment (if failed)
+     * View Shipment
+     * Contact User
+
+2. ProcessRefundDialog:
+   - Refund type: Full or Partial
+   - Amount input (for partial)
+   - Reason selection:
+     * Dispute resolution
+     * Service issue
+     * Cancellation
+     * Error
+     * Other
+   - Notes field
+   - Process button
+
+3. Create RefundRepository:
+   - Process refund (creates payment_refunds record)
+   - Records in admin_audit_logs
+   - Sends notification to user
+
+4. Supabase Edge Function:
+   - process-refund: Handles refund logic + Paystack API if needed
+
+File structure:
+lib/features/payments/presentation/
+??? screens/
+?   ??? transaction_detail_screen.dart
+??? controllers/
+?   ??? transaction_detail_controller.dart
+??? widgets/
+    ??? transaction_info_card.dart
+    ??? transaction_timeline.dart
+    ??? related_transactions_list.dart
+    ??? process_refund_dialog.dart
+
+lib/features/payments/data/repositories/
+??? refund_repository_impl.dart
+
+supabase/functions/
+??? process-refund/index.ts
+Files to Create
+lib/features/payments/presentation/screens/transaction_detail_screen.dart
+lib/features/payments/presentation/controllers/transaction_detail_controller.dart
+lib/features/payments/presentation/widgets/transaction_info_card.dart
+lib/features/payments/presentation/widgets/transaction_timeline.dart
+lib/features/payments/presentation/widgets/related_transactions_list.dart
+lib/features/payments/presentation/widgets/process_refund_dialog.dart
+lib/features/payments/data/repositories/refund_repository_impl.dart
+supabase/functions/process-refund/index.ts
+Success Criteria
+* [ ] Transaction detail shows all information
+* [ ] User card links to profile
+* [ ] Shipment card links to shipment
+* [ ] Timeline shows transaction history
+* [ ] Related transactions listed
+* [ ] Refund dialog opens for completed transactions
+* [ ] Partial refund calculates correctly
+* [ ] Refund creates payment_refunds record
+* [ ] Audit log created
+* [ ] User notified of refund
+
+Step 23: Failed Payments Handling
+Objective
+Create failed payments management screen with retry functionality.
+Prerequisites
+* Completed Step 22
+Claude Prompt
+I need to create a failed payments management screen.
+
+Requirements:
+
+1. FailedPaymentsScreen:
+   - List of failed transactions
+   - Each item shows:
+     * Transaction ID
+     * User name and avatar
+     * Amount
+     * Failure reason
+     * Failure timestamp
+     * Retry count
+   
+   - Filter by:
+     * Date range
+     * Failure reason
+     * User type
+   
+   - Sort by: Date, Amount
+
+2. FailedPaymentDetailScreen:
+   - Full transaction details
+   - Failure reason explanation
+   - User contact information
+   - Shipment details
+   - Action buttons:
+     * Retry Payment
+     * Contact User (opens message compose)
+     * Mark as Resolved
+     * Cancel Transaction
+
+3. RetryPaymentDialog:
+   - Show current failure reason
+   - Confirm retry button
+   - Alternative: Mark as resolved with notes
+
+4. Create FailedPaymentsRepository:
+   - Fetch failed payments
+   - Retry payment
+   - Mark as resolved
+   - Update transaction status
+
+File structure:
+lib/features/payments/presentation/
+??? screens/
+?   ??? failed_payments_screen.dart
+??? controllers/
+?   ??? failed_payments_controller.dart
+??? widgets/
+    ??? failed_payment_list_item.dart
+    ??? failure_reason_card.dart
+    ??? retry_payment_dialog.dart
+Files to Create
+lib/features/payments/presentation/screens/failed_payments_screen.dart
+lib/features/payments/presentation/controllers/failed_payments_controller.dart
+lib/features/payments/presentation/widgets/failed_payment_list_item.dart
+lib/features/payments/presentation/widgets/failure_reason_card.dart
+lib/features/payments/presentation/widgets/retry_payment_dialog.dart
+Success Criteria
+* [ ] Failed payments list displays correctly
+* [ ] Filters work
+* [ ] Failure reasons displayed clearly
+* [ ] Retry triggers new payment attempt
+* [ ] Mark as resolved updates status
+* [ ] Contact user opens compose message
+* [ ] Audit log tracks all actions
+
+PHASE 7: BANK VERIFICATION
+Step 24: Bank Verification UI
+Objective
+Create bank account verification management screen for drivers.
+Prerequisites
+* Completed Phase 6
+Claude Prompt
+I need to create a bank verification management screen.
+
+IMPORTANT: Only driver_bank_accounts exists. There is NO shipper_bank_accounts table.
+
+Requirements:
+
+1. BankVerificationsScreen:
+   - Tabs:
+     * Pending Verification (is_verified = false)
+     * Verified
+     * Rejected
+     * All
+   
+   - List items showing:
+     * Driver name and avatar
+     * Bank name
+     * Account number (masked: ****1234)
+     * Verification status
+     * Last updated date
+   
+   - Filter by bank name
+   - Search by driver name
+
+2. BankVerificationDetailScreen:
+   - Driver information card (link to profile)
+   - Bank account details:
+     * Bank name, bank_code
+     * Account number (show/hide toggle)
+     * Account holder name (from verification)
+     * Paystack recipient code (if exists)
+     * Verification method (api/manual/override)
+     * Verification details (JSONB)
+   
+   - Action buttons:
+     * Verify (API verification via Paystack)
+     * Manual Verify (admin override)
+     * Reject
+     * Request Re-submission
+
+3. VerifyBankAccountDialog:
+   - Shows account details
+   - Verification method selection
+   - Notes field
+   - Verify button
+
+4. RejectBankAccountDialog:
+   - Reason selection
+   - Notes field
+   - Reject button
+
+5. Create BankVerificationRepository:
+   - Fetch driver_bank_accounts with filters
+   - Trigger API verification
+   - Manual verify (update is_verified, verified_by, verification_method)
+   - Reject (update rejected_at, rejection_reason)
+
+File structure:
+lib/features/bank_verification/
+??? data/
+?   ??? repositories/
+?   ?   ??? bank_verification_repository_impl.dart
+?   ??? models/
+?       ??? bank_account_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? bank_account.dart
+?   ??? repositories/
+?       ??? bank_verification_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? bank_verifications_screen.dart
+    ?   ??? bank_verification_detail_screen.dart
+    ??? controllers/
+    ?   ??? bank_verification_controller.dart
+    ??? providers/
+    ?   ??? bank_verification_providers.dart
+    ??? widgets/
+        ??? bank_account_list_item.dart
+        ??? bank_details_card.dart
+        ??? verify_bank_dialog.dart
+        ??? reject_bank_dialog.dart
+Files to Create
+lib/features/bank_verification/data/repositories/bank_verification_repository_impl.dart
+lib/features/bank_verification/data/models/bank_account_model.dart
+lib/features/bank_verification/domain/entities/bank_account.dart
+lib/features/bank_verification/domain/repositories/bank_verification_repository.dart
+lib/features/bank_verification/presentation/screens/bank_verifications_screen.dart
+lib/features/bank_verification/presentation/screens/bank_verification_detail_screen.dart
+lib/features/bank_verification/presentation/controllers/bank_verification_controller.dart
+lib/features/bank_verification/presentation/providers/bank_verification_providers.dart
+lib/features/bank_verification/presentation/widgets/bank_account_list_item.dart
+lib/features/bank_verification/presentation/widgets/bank_details_card.dart
+lib/features/bank_verification/presentation/widgets/verify_bank_dialog.dart
+lib/features/bank_verification/presentation/widgets/reject_bank_dialog.dart
+Success Criteria
+* [ ] Bank verifications screen shows driver accounts
+* [ ] Tabs filter by status correctly
+* [ ] Account numbers masked for security
+* [ ] Show/hide toggle reveals full account number
+* [ ] Detail screen shows all information
+* [ ] Verify button triggers verification
+* [ ] Manual verify updates status
+* [ ] Reject requires reason
+* [ ] Audit log records all actions
+* [ ] Driver receives notification of status
+
+Step 25: Third-Party API Integration
+Objective
+Integrate Paystack API for automatic bank account verification.
+Prerequisites
+* Completed Step 24
+Claude Prompt
+I need to integrate Paystack API for bank account verification in South Africa.
+
+Paystack Bank Account Verification API:
+- Endpoint: POST https://api.paystack.co/bank/resolve
+- Headers: Authorization: Bearer SECRET_KEY
+- Body: { "account_number": "0123456789", "bank_code": "058" }
+- Response: { "status": true, "data": { "account_number": "0123456789", "account_name": "John Doe", "bank_id": 9 } }
+
+Requirements:
+
+1. Create BankVerificationService:
+   - Initialize with PAYSTACK_SECRET_KEY from .env
+   - Verify bank account method:
+     * Input: account_number, bank_code
+     * Output: account_name from Paystack
+   - Get list of banks method (for reference)
+   - Handle API errors gracefully
+   - Rate limiting consideration
+
+2. Create Supabase Edge Function:
+   - verify-bank-account
+     * Receives driver_bank_account ID
+     * Calls Paystack API
+     * Compares returned account_name with expected name
+     * Updates driver_bank_accounts:
+       - is_verified = true/false
+       - verified_at = NOW()
+       - verified_by = admin_id
+       - verification_method = 'api'
+       - verification_details = Paystack response (JSONB)
+     * Creates audit log entry
+     * Sends notification to driver
+
+3. Name matching logic:
+   - Fuzzy match account_name with driver's name
+   - Calculate match percentage
+   - Auto-approve if match > 80%
+   - Flag for manual review if 50-80%
+   - Auto-reject if < 50%
+
+4. Error handling:
+   - Invalid account number
+   - Bank API down
+   - Network timeout
+   - Rate limit exceeded
+   - Fallback to manual verification
+
+5. Update .env with PAYSTACK_SECRET_KEY
+
+File structure:
+lib/core/services/
+??? bank_verification_service.dart
+
+supabase/functions/
+??? verify-bank-account/index.ts
+
+.env (UPDATE)
+Files to Create/Modify
+lib/core/services/bank_verification_service.dart
+supabase/functions/verify-bank-account/index.ts
+.env (MODIFY - add PAYSTACK_SECRET_KEY)
+Success Criteria
+* [ ] Paystack API credentials configured
+* [ ] Can verify valid bank account
+* [ ] Returns account holder name
+* [ ] Name matching works correctly
+* [ ] Invalid account returns appropriate error
+* [ ] API errors handled gracefully
+* [ ] Verification results stored in database
+* [ ] Driver notified of verification result
+* [ ] Fallback to manual verification on API failure
+* [ ] Audit log records verification attempts
+
+PHASE 8: COMMUNICATION
+Step 26: In-App Messaging
+Objective
+Implement in-app messaging system for admins to communicate with users.
+Prerequisites
+* Completed Phase 7
+Claude Prompt
+I need to create an in-app messaging system using the admin_messages table.
+
+Requirements:
+
+1. MessagesScreen (main tab):
+   - Tabs:
+     * Sent Messages
+     * Compose New
+
+   - Sent Messages tab:
+     * List of sent messages
+     * Recipient name and photo
+     * Message preview (title or body truncated)
+     * Sent timestamp
+     * Delivery status (sent, delivered, read)
+     * Tap to view details
+
+2. ComposeMessageScreen:
+   - Recipient selection:
+     * Search users by name, phone, email
+     * Recent recipients list
+     * Filter by role (Driver/Shipper)
+   
+   - Message composition:
+     * Title field
+     * Body field (text area)
+     * Priority selection (normal, high, urgent)
+     * Send as push notification checkbox
+   
+   - Template selection button (insert template)
+   - Preview button
+   - Send button
+
+3. MessageDetailScreen:
+   - Full message content
+   - Recipient details
+   - Sent timestamp
+   - Delivered timestamp (if available)
+   - Read timestamp (if available)
+
+4. Create MessagingRepository:
+   - Send message (creates admin_messages record)
+   - Fetch sent messages with pagination
+   - Fetch message details
+   - Search users for recipient selection
+
+5. Supabase Edge Function:
+   - send-admin-message
+     * Creates admin_messages record
+     * Sends push notification via FCM if requested
+     * Returns message ID
+
+File structure:
+lib/features/messages/
+??? data/
+?   ??? repositories/
+?   ?   ??? messaging_repository_impl.dart
+?   ??? models/
+?       ??? admin_message_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? admin_message.dart
+?   ??? repositories/
+?       ??? messaging_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? messages_screen.dart
+    ?   ??? compose_message_screen.dart
+    ?   ??? message_detail_screen.dart
+    ??? controllers/
+    ?   ??? messages_controller.dart
+    ?   ??? compose_message_controller.dart
+    ??? providers/
+    ?   ??? messages_providers.dart
+    ??? widgets/
+        ??? message_list_item.dart
+        ??? recipient_selector.dart
+        ??? message_preview_dialog.dart
+
+supabase/functions/
+??? send-admin-message/index.ts
+Files to Create
+lib/features/messages/data/repositories/messaging_repository_impl.dart
+lib/features/messages/data/models/admin_message_model.dart
+lib/features/messages/domain/entities/admin_message.dart
+lib/features/messages/domain/repositories/messaging_repository.dart
+lib/features/messages/presentation/screens/messages_screen.dart
+lib/features/messages/presentation/screens/compose_message_screen.dart
+lib/features/messages/presentation/screens/message_detail_screen.dart
+lib/features/messages/presentation/controllers/messages_controller.dart
+lib/features/messages/presentation/controllers/compose_message_controller.dart
+lib/features/messages/presentation/providers/messages_providers.dart
+lib/features/messages/presentation/widgets/message_list_item.dart
+lib/features/messages/presentation/widgets/recipient_selector.dart
+lib/features/messages/presentation/widgets/message_preview_dialog.dart
+supabase/functions/send-admin-message/index.ts
+Success Criteria
+* [ ] Messages screen displays sent messages
+* [ ] Can compose new message
+* [ ] Recipient search works
+* [ ] Message sends successfully
+* [ ] Push notification sent if requested
+* [ ] Message detail shows all info
+* [ ] Delivery status updates (from main app marking as read)
+* [ ] Recent recipients shown
+* [ ] Loading states handled
+
+Step 27: Push Notifications
+Objective
+Implement push notification sending for individual and broadcast messages.
+Prerequisites
+* Completed Step 26
+Claude Prompt
+I need to implement push notification sending using Firebase Cloud Messaging.
+
+Requirements:
+
+1. BroadcastNotificationScreen:
+   - Target audience selection:
+     * All users
+     * All drivers
+     * All shippers
+     * Drivers by verification status
+     * Users by location (province)
+     * Custom selection
+   
+   - Notification content:
+     * Title (required)
+     * Body (required)
+     * Priority (normal, high)
+   
+   - Preview recipient count
+   - Schedule for later (optional)
+   - Send button
+
+2. NotificationService:
+   - Send to single user (using their fcm_token from users table)
+   - Send to topic (all_drivers, all_shippers, all_users)
+   - Send to multiple tokens
+   - Handle send errors
+
+3. Supabase Edge Functions:
+   - send-push-notification: Single user
+   - send-broadcast-notification: Multiple users/topics
+
+4. Track notification delivery:
+   - Update admin_messages.push_notification_sent = true
+   - Log send results
+
+File structure:
+lib/features/messages/presentation/
+??? screens/
+?   ??? broadcast_notification_screen.dart
+??? controllers/
+?   ??? broadcast_controller.dart
+??? widgets/
+    ??? audience_selector.dart
+    ??? recipient_count_preview.dart
+
+lib/core/services/
+??? notification_service.dart
+
+supabase/functions/
+??? send-push-notification/index.ts
+??? send-broadcast-notification/index.ts
+Files to Create
+lib/features/messages/presentation/screens/broadcast_notification_screen.dart
+lib/features/messages/presentation/controllers/broadcast_controller.dart
+lib/features/messages/presentation/widgets/audience_selector.dart
+lib/features/messages/presentation/widgets/recipient_count_preview.dart
+lib/core/services/notification_service.dart
+supabase/functions/send-push-notification/index.ts
+supabase/functions/send-broadcast-notification/index.ts
+Success Criteria
+* [ ] Broadcast screen displays audience options
+* [ ] Recipient count preview accurate
+* [ ] Single notification sends successfully
+* [ ] Broadcast to topic works
+* [ ] Scheduled notifications work (optional)
+* [ ] Delivery tracked in database
+* [ ] Errors handled gracefully
+* [ ] Audit log records broadcasts
+
+Step 28: Message Templates
+Objective
+Create message template management system.
+Prerequisites
+* Completed Steps 26-27
+Claude Prompt
+I need to create a message template management system.
+
+Requirements:
+
+1. TemplatesScreen (from Messages):
+   - List of templates
+   - Categories: Document Requests, Approvals, Payments, Warnings, General
+   - Search templates
+   - Create new template button
+
+2. CreateTemplateScreen:
+   - Template name
+   - Category selection
+   - Title template (with variable placeholders)
+   - Body template (with variable placeholders)
+   - Variable inserter ({{user_name}}, {{shipment_id}}, {{amount}}, etc.)
+   - Preview with sample data
+   - Save button
+
+3. Pre-defined templates (seeded):
+   - "Please re-submit your driver's license"
+   - "Your account has been approved"
+   - "Payment processed: R{{amount}}"
+   - "Action required: Verify your bank account"
+   - "Dispute opened for shipment #{{shipment_id}}"
+   - "Your account has been suspended"
+
+4. Template variables:
+   - {{user_name}} - Recipient's name
+   - {{first_name}} - First name
+   - {{shipment_id}} - Shipment reference
+   - {{amount}} - Monetary amount
+   - {{date}} - Current date
+   - {{reason}} - Action reason
+
+5. Create migration for message_templates table:
+   - id, name, category, title_template, body_template, created_by, created_at
+
+6. Template parser utility:
+   - Replace variables with actual values
+   - Validate all variables filled
+
+File structure:
+lib/features/messages/presentation/
+??? screens/
+?   ??? templates_screen.dart
+?   ??? create_template_screen.dart
+??? widgets/
+    ??? template_list_item.dart
+    ??? variable_inserter.dart
+    ??? template_preview.dart
+
+lib/features/messages/data/repositories/
+??? templates_repository_impl.dart
+
+lib/core/utils/
+??? template_parser.dart
+
+supabase/migrations/
+??? 20260120_message_templates.sql
+Files to Create
+lib/features/messages/presentation/screens/templates_screen.dart
+lib/features/messages/presentation/screens/create_template_screen.dart
+lib/features/messages/presentation/widgets/template_list_item.dart
+lib/features/messages/presentation/widgets/variable_inserter.dart
+lib/features/messages/presentation/widgets/template_preview.dart
+lib/features/messages/data/repositories/templates_repository_impl.dart
+lib/core/utils/template_parser.dart
+supabase/migrations/20260120_message_templates.sql
+Success Criteria
+* [ ] Templates screen lists all templates
+* [ ] Can create new template
+* [ ] Variables insert correctly
+* [ ] Preview shows with sample data
+* [ ] Can edit existing template
+* [ ] Can delete template
+* [ ] Templates selectable in compose message
+* [ ] Variables replaced with actual values
+* [ ] Pre-defined templates seeded
+
+PHASE 9: DISPUTE RESOLUTION
+Step 29: Disputes List
+Objective
+Create disputes list screen for viewing and managing all platform disputes.
+Prerequisites
+* Completed Phase 8
+Claude Prompt
+I need to create a disputes management screen using the disputes table.
+
+Requirements:
+
+1. DisputesListScreen:
+   - Status tabs (using dispute_status enum):
+     * Open (count badge)
+     * Under Review
+     * Awaiting Response
+     * Resolved
+     * All
+
+   - List view showing:
+     * Dispute ID
+     * Shipment reference (shipment_id ? freight_posts)
+     * Parties: shipper (opened_by) vs driver (against_user_id)
+     * Dispute type (dispute_type enum)
+     * Priority badge (dispute_priority enum)
+     * Opened date
+     * Status badge
+     * Assigned admin (if any)
+
+   - Filter options:
+     * Date range
+     * Dispute type
+     * Priority
+     * Assigned/Unassigned
+
+   - Sort options:
+     * Date (newest/oldest)
+     * Priority (urgent first)
+
+   - Quick actions:
+     * Assign to me
+     * Change priority
+
+   - Pull-to-refresh
+   - Pagination
+
+2. Create DisputesRepository:
+   - Fetch disputes with filters and pagination
+   - Assign dispute to admin (updates assigned_to, assigned_at)
+   - Update dispute priority
+   - Get dispute counts by status
+
+File structure:
+lib/features/disputes/
+??? data/
+?   ??? repositories/
+?   ?   ??? disputes_repository_impl.dart
+?   ??? models/
+?       ??? dispute_model.dart
+??? domain/
+?   ??? entities/
+?   ?   ??? dispute.dart
+?   ??? repositories/
+?       ??? disputes_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? disputes_list_screen.dart
+    ??? controllers/
+    ?   ??? disputes_controller.dart
+    ??? providers/
+    ?   ??? disputes_providers.dart
+    ??? widgets/
+        ??? dispute_list_item.dart
+        ??? dispute_filter_panel.dart
+        ??? assign_admin_dialog.dart
+        ??? priority_badge.dart
+Files to Create
+lib/features/disputes/data/repositories/disputes_repository_impl.dart
+lib/features/disputes/data/models/dispute_model.dart
+lib/features/disputes/domain/entities/dispute.dart
+lib/features/disputes/domain/repositories/disputes_repository.dart
+lib/features/disputes/presentation/screens/disputes_list_screen.dart
+lib/features/disputes/presentation/controllers/disputes_controller.dart
+lib/features/disputes/presentation/providers/disputes_providers.dart
+lib/features/disputes/presentation/widgets/dispute_list_item.dart
+lib/features/disputes/presentation/widgets/dispute_filter_panel.dart
+lib/features/disputes/presentation/widgets/assign_admin_dialog.dart
+lib/features/disputes/presentation/widgets/priority_badge.dart
+Success Criteria
+* [ ] Disputes list displays correctly
+* [ ] Tabs show accurate counts
+* [ ] Filters work (type, priority, date, assigned)
+* [ ] Sorting changes order
+* [ ] Assign to me updates dispute
+* [ ] Priority change reflects in DB
+* [ ] Tapping dispute opens details
+* [ ] Status badges color-coded by dispute_status enum
+* [ ] Priority badges color-coded
+* [ ] Pull-to-refresh updates list
+
+Step 30: Dispute Details & Resolution
+Objective
+Create dispute detail screen with evidence review and resolution workflow.
+Prerequisites
+* Completed Step 29
+Claude Prompt
+I need to create a comprehensive dispute details screen for resolving disputes.
+
+Requirements:
+
+1. DisputeDetailScreen with sections:
+   - Header:
+     * Dispute ID, Status badge, Priority badge
+     * Assigned admin, Opened date, Days open
+
+   - Shipment Information (from freight_posts):
+     * Shipment ID, Pickup/delivery locations
+     * Bid amount, Delivery status
+
+   - Parties Involved:
+     * Shipper card (opened_by ? users)
+     * Driver card (against_user_id ? users)
+     * Each showing: name, rating, total disputes
+
+   - Dispute Details:
+     * Type (dispute_type enum)
+     * Description
+     * Created timestamp
+
+   - Evidence section (from dispute_evidence):
+     * Photos, documents uploaded by parties
+     * Gallery view with tap to expand
+
+   - Admin Actions:
+     * Add internal note
+     * Request additional info from either party
+     * Change priority
+     * Assign to another admin
+
+   - Resolution panel:
+     * Resolution type selection:
+       - Rule in favor of shipper
+       - Rule in favor of driver
+       - Split decision
+       - No action required
+       - Escalate
+     * Financial adjustment input
+     * Resolution summary (required)
+     * Action taken (warning_issued, no_action, user_suspended)
+     * Resolve button
+
+2. ResolveDisputeDialog:
+   - Resolution type
+   - Financial adjustment (optional amount)
+   - Action taken
+   - Resolution summary
+   - Notify both parties checkbox
+   - Resolve button
+
+3. Create DisputeResolutionRepository:
+   - Resolve dispute (updates status='resolved', resolution, resolved_by, resolved_at)
+   - Add admin note
+   - Request additional info
+   - Send notifications to parties
+   - Record in audit log
+
+File structure:
+lib/features/disputes/presentation/
+??? screens/
+?   ??? dispute_detail_screen.dart
+??? controllers/
+?   ??? dispute_detail_controller.dart
+??? widgets/
+    ??? dispute_header.dart
+    ??? shipment_info_card.dart
+    ??? parties_involved_section.dart
+    ??? dispute_details_card.dart
+    ??? evidence_gallery.dart
+    ??? admin_actions_panel.dart
+    ??? resolution_panel.dart
+    ??? resolve_dispute_dialog.dart
+Files to Create
+lib/features/disputes/presentation/screens/dispute_detail_screen.dart
+lib/features/disputes/presentation/controllers/dispute_detail_controller.dart
+lib/features/disputes/presentation/widgets/dispute_header.dart
+lib/features/disputes/presentation/widgets/shipment_info_card.dart
+lib/features/disputes/presentation/widgets/parties_involved_section.dart
+lib/features/disputes/presentation/widgets/dispute_details_card.dart
+lib/features/disputes/presentation/widgets/evidence_gallery.dart
+lib/features/disputes/presentation/widgets/admin_actions_panel.dart
+lib/features/disputes/presentation/widgets/resolution_panel.dart
+lib/features/disputes/presentation/widgets/resolve_dispute_dialog.dart
+lib/features/disputes/data/repositories/dispute_resolution_repository_impl.dart
+Success Criteria
+* [ ] Dispute detail shows all information
+* [ ] Shipment info displays from freight_posts
+* [ ] Both parties shown with history
+* [ ] Evidence gallery works
+* [ ] Can add admin notes
+* [ ] Can request info from parties
+* [ ] Resolution dialog works
+* [ ] Resolve updates database correctly
+* [ ] Notifications sent to parties
+* [ ] Audit log records resolution
+
+Step 31: Evidence Management
+Objective
+Create comprehensive evidence viewing with GPS tracking visualization.
+Prerequisites
+* Completed Step 30
+Claude Prompt
+I need to create comprehensive evidence viewing for disputes.
+
+Requirements:
+
+1. EvidenceViewerScreen (full screen):
+   - Gallery of all evidence items
+   - Each item shows:
+     * Image/document preview
+     * Uploaded by (shipper/driver)
+     * Upload date
+     * Description
+     * Evidence type (photo, delivery_proof, damage_photo, receipt)
+   
+   - Tap to view full screen with zoom
+   - Swipe between items
+   - Download option
+
+2. GPSTrackingViewer (for shipment route):
+   - Map showing:
+     * Pickup location marker
+     * Delivery location marker
+     * Driver's route (polyline)
+     * Timestamps at key points
+   
+   - Timeline scrubber to view location at specific time
+   - Stats: distance traveled, stops made
+
+3. Create EvidenceRepository:
+   - Fetch dispute evidence
+   - Fetch shipment GPS data (if available from freight_posts)
+
+File structure:
+lib/features/disputes/presentation/widgets/
+??? evidence_viewer_screen.dart
+??? evidence_item_card.dart
+??? gps_tracking_viewer.dart
+
+lib/features/disputes/data/repositories/
+??? evidence_repository_impl.dart
+
+Use Google Maps for GPS visualization.
+Use photo_view for image viewing.
+Files to Create
+lib/features/disputes/presentation/widgets/evidence_viewer_screen.dart
+lib/features/disputes/presentation/widgets/evidence_item_card.dart
+lib/features/disputes/presentation/widgets/gps_tracking_viewer.dart
+lib/features/disputes/data/repositories/evidence_repository_impl.dart
+Success Criteria
+* [ ] Evidence gallery displays all items
+* [ ] Tapping item opens full-screen viewer
+* [ ] Can swipe between evidence items
+* [ ] Images zoom and pan smoothly
+* [ ] GPS viewer shows route on map (if data available)
+* [ ] Can download evidence
+* [ ] Metadata displays correctly
+
+PHASE 10: ADDITIONAL FEATURES
+Step 32: SMS Usage Tracking
+Objective
+Create SMS usage tracking dashboard showing BulkSMS usage and costs.
+Prerequisites
+* Completed Phase 9
+Claude Prompt
+I need to create an SMS usage tracking dashboard.
+
+Requirements:
+
+1. SMSUsageScreen:
+   - Usage overview cards:
+     * Total SMS sent (today, week, month, all time)
+     * Total cost (ZAR)
+     * Average cost per SMS
+   
+   - Trends section:
+     * SMS volume chart (last 30 days)
+     * Cost trend chart
+   
+   - Breakdown by type (pie chart):
+     * Verification SMS
+     * Bid notifications
+     * Shipment updates
+     * Admin messages
+   
+   - BulkSMS Integration panel:
+     * Current account balance (from API)
+     * Low balance alert if < R100
+     * API status indicator
+   
+   - Recent SMS log (table):
+     * Recipient (masked phone)
+     * Type
+     * Cost
+     * Status (delivered/failed)
+     * Timestamp
+
+2. BulkSMSService:
+   - Check account balance
+   - Get delivery reports
+   - (SMS sending handled by main app)
+
+3. Create sms_logs table migration (if not exists)
+
+File structure:
+lib/features/sms_usage/
+??? data/
+?   ??? repositories/
+?       ??? sms_usage_repository_impl.dart
+??? domain/
+?   ??? repositories/
+?       ??? sms_usage_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? sms_usage_screen.dart
+    ??? controllers/
+    ?   ??? sms_usage_controller.dart
+    ??? widgets/
+        ??? usage_overview_cards.dart
+        ??? sms_trends_chart.dart
+        ??? breakdown_pie_chart.dart
+        ??? bulksms_status_panel.dart
+        ??? recent_sms_table.dart
+
+lib/core/services/
+??? bulksms_service.dart
+
+Access from More tab.
+Files to Create
+lib/features/sms_usage/data/repositories/sms_usage_repository_impl.dart
+lib/features/sms_usage/domain/repositories/sms_usage_repository.dart
+lib/features/sms_usage/presentation/screens/sms_usage_screen.dart
+lib/features/sms_usage/presentation/controllers/sms_usage_controller.dart
+lib/features/sms_usage/presentation/widgets/usage_overview_cards.dart
+lib/features/sms_usage/presentation/widgets/sms_trends_chart.dart
+lib/features/sms_usage/presentation/widgets/breakdown_pie_chart.dart
+lib/features/sms_usage/presentation/widgets/bulksms_status_panel.dart
+lib/features/sms_usage/presentation/widgets/recent_sms_table.dart
+lib/core/services/bulksms_service.dart
+Success Criteria
+* [ ] SMS usage screen displays all stats
+* [ ] Charts show trends correctly
+* [ ] Breakdown by type accurate
+* [ ] BulkSMS balance displays (if API available)
+* [ ] Low balance alert shows
+* [ ] Recent SMS log lists messages
+* [ ] Phone numbers masked
+* [ ] Costs calculated correctly
+
+Step 33: Shipper Management (View Only)
+Objective
+Create shipper viewing screens (shippers are auto-approved, no approval workflow needed).
+Prerequisites
+* Completed Step 32
+Claude Prompt
+I need to create shipper management screens.
+
+IMPORTANT: Shippers are auto-approved when they sign in with a verified phone number. There is NO approval workflow for shippers.
+
+Requirements:
+
+1. ShippersListScreen:
+   - List of all shippers (users WHERE role='Shipper')
+   - Each item shows:
+     * Name, photo
+     * Email, phone
+     * Registration date
+     * Total shipments posted (from freight_posts)
+     * Suspended indicator if is_suspended = true
+   
+   - Search by name, phone, email
+   - Filter by suspended status
+   - Sort by registration date, shipment count
+
+2. ShipperProfileScreen:
+   - Personal information card
+   - Statistics card:
+     * Total shipments posted
+     * Active shipments
+     * Completed shipments
+     * Cancelled shipments
+   - Recent shipments list (from freight_posts WHERE shipper_id = user.id)
+   - Rating received from drivers
+   - Action buttons:
+     * Suspend/Unsuspend
+     * Send Message
+     * View Shipments
+
+3. NO approval workflow (shippers auto-approved)
+4. Reuse driver suspension functionality
+
+File structure:
+lib/features/users/presentation/
+??? screens/
+?   ??? shippers_list_screen.dart
+?   ??? shipper_profile_screen.dart
+??? controllers/
+?   ??? shippers_controller.dart
+?   ??? shipper_profile_controller.dart
+??? widgets/
+    ??? shipper_list_item.dart
+    ??? shipper_stats_card.dart
+    ??? shipper_shipments_list.dart
+
+lib/features/users/data/repositories/
+??? shippers_repository_impl.dart
+Files to Create
+lib/features/users/presentation/screens/shippers_list_screen.dart
+lib/features/users/presentation/screens/shipper_profile_screen.dart
+lib/features/users/presentation/controllers/shippers_controller.dart
+lib/features/users/presentation/controllers/shipper_profile_controller.dart
+lib/features/users/presentation/widgets/shipper_list_item.dart
+lib/features/users/presentation/widgets/shipper_stats_card.dart
+lib/features/users/presentation/widgets/shipper_shipments_list.dart
+lib/features/users/data/repositories/shippers_repository_impl.dart
+Success Criteria
+* [ ] Shippers list displays correctly
+* [ ] Search finds shippers
+* [ ] Filter by suspended works
+* [ ] Profile shows all information
+* [ ] Statistics card accurate
+* [ ] Recent shipments listed
+* [ ] Can suspend/unsuspend shipper
+* [ ] Can send message to shipper
+* [ ] Suspended indicator shows
+
+Step 34: Audit Logs Viewer
+Objective
+Create audit log viewer for reviewing all admin actions.
+Prerequisites
+* Completed Step 33
+Claude Prompt
+I need to create an audit logs viewer for reviewing admin actions.
+
+Requirements:
+
+1. AuditLogsScreen:
+   - List of all audit logs (from admin_audit_logs)
+   - Each item shows:
+     * Action type
+     * Admin name (from admin_id ? users)
+     * Target (type + ID)
+     * Timestamp
+     * IP address
+   
+   - Filter by:
+     * Action type
+     * Admin
+     * Target type (user, vehicle, dispute, payment)
+     * Date range
+   
+   - Search by target ID
+   - Tap to view details
+
+2. AuditLogDetailScreen:
+   - Full log information
+   - Old values (JSONB formatted)
+   - New values (JSONB formatted)
+   - Diff view showing changes
+   - Details text
+   - Link to target (if applicable)
+
+3. Export audit logs to CSV
+
+File structure:
+lib/features/audit_logs/
+??? data/
+?   ??? repositories/
+?       ??? audit_logs_repository_impl.dart
+??? domain/
+?   ??? repositories/
+?       ??? audit_logs_repository.dart
+??? presentation/
+    ??? screens/
+    ?   ??? audit_logs_screen.dart
+    ?   ??? audit_log_detail_screen.dart
+    ??? controllers/
+    ?   ??? audit_logs_controller.dart
+    ??? widgets/
+        ??? audit_log_list_item.dart
+        ??? audit_log_filter_sheet.dart
+        ??? json_diff_viewer.dart
+
+Access from More tab.
+Files to Create
+lib/features/audit_logs/data/repositories/audit_logs_repository_impl.dart
+lib/features/audit_logs/domain/repositories/audit_logs_repository.dart
+lib/features/audit_logs/presentation/screens/audit_logs_screen.dart
+lib/features/audit_logs/presentation/screens/audit_log_detail_screen.dart
+lib/features/audit_logs/presentation/controllers/audit_logs_controller.dart
+lib/features/audit_logs/presentation/widgets/audit_log_list_item.dart
+lib/features/audit_logs/presentation/widgets/audit_log_filter_sheet.dart
+lib/features/audit_logs/presentation/widgets/json_diff_viewer.dart
+Success Criteria
+* [ ] Audit logs screen displays all logs
+* [ ] Filters work (action, admin, target, date)
+* [ ] Search by target ID works
+* [ ] Detail screen shows full log
+* [ ] JSON values formatted nicely
+* [ ] Diff view shows changes
+* [ ] Export to CSV works
+* [ ] Pagination handles large datasets
+
+Step 35: User Suspension System
+Objective
+Implement comprehensive user suspension functionality.
+Prerequisites
+* Completed Step 34
+Claude Prompt
+I need to implement a user suspension system that works for both drivers and shippers.
+
+Requirements:
+
+1. SuspendUserDialog:
+   - Reason selection:
+     * Policy violation
+     * Fraudulent activity
+     * Multiple disputes
+     * Payment issues
+     * Inappropriate behavior
+     * Other (with text input)
+   - Suspension duration:
+     * Temporary (with date picker)
+     * Permanent
+   - Notes field
+   - Suspend button
+
+2. UnsuspendUserDialog:
+   - Confirmation
+   - Notes field (reason for unsuspending)
+   - Unsuspend button
+
+3. Suspension logic:
+   - Updates users table:
+     * is_suspended = true
+     * suspended_at = NOW()
+     * suspended_reason = reason
+     * suspended_by = admin_id
+   - Creates driver_approval_history record (for drivers)
+   - Creates admin_audit_logs record
+   - Sends notification to user
+   - For drivers: also updates driver_verification_status to 'rejected'
+
+4. Unsuspension logic:
+   - Updates users table:
+     * is_suspended = false
+     * suspended_at = NULL
+     * suspended_reason = NULL
+   - Creates audit log
+   - Sends notification to user
+   - For drivers: may need to re-verify
+
+5. Supabase Edge Functions:
+   - suspend-user
+   - unsuspend-user
+
+File structure:
+lib/features/users/presentation/widgets/
+??? suspend_user_dialog.dart
+??? unsuspend_user_dialog.dart
+
+lib/features/users/data/repositories/
+??? user_suspension_repository_impl.dart
+
+supabase/functions/
+??? suspend-user/index.ts
+??? unsuspend-user/index.ts
+Files to Create
+lib/features/users/presentation/widgets/suspend_user_dialog.dart
+lib/features/users/presentation/widgets/unsuspend_user_dialog.dart
+lib/features/users/data/repositories/user_suspension_repository_impl.dart
+supabase/functions/suspend-user/index.ts
+supabase/functions/unsuspend-user/index.ts
+Success Criteria
+* [ ] Suspend dialog works for both drivers and shippers
+* [ ] Reason selection required
+* [ ] Duration options work
+* [ ] Database updated correctly
+* [ ] Audit log created
+* [ ] User notified of suspension
+* [ ] Unsuspend works correctly
+* [ ] Suspended users cannot login (in main app)
+
+PHASE 11: POLISH & TESTING
+Step 36: Error Handling & Edge Cases
+Objective
+Implement comprehensive error handling and edge case management.
+Prerequisites
+* Completed Phase 10
+Claude Prompt
+I need to implement comprehensive error handling throughout the admin dashboard.
+
+Requirements:
+
+1. Global error handling:
+   - ErrorBoundary widget to catch widget errors
+   - Global exception handler in main.dart
+   - Crash reporting setup (optional: Firebase Crashlytics)
+
+2. Network error handling:
+   - Offline detection and indicator
+   - Retry mechanisms for failed requests
+   - Timeout handling
+   - Connection state listener
+
+3. Form validation:
+   - Comprehensive validators for all forms
+   - Inline error messages
+   - Form-level error summaries
+
+4. Edge cases to handle:
+   - Empty states for all lists
+   - No search results
+   - Session timeout during operation
+   - Concurrent modification conflicts
+   - Large file uploads
+   - Slow network conditions
+
+5. Error messages:
+   - User-friendly error messages
+   - Technical details in logs only
+   - Suggested actions for common errors
+
+6. Retry and recovery:
+   - Pull-to-refresh on error
+   - Retry buttons
+   - Auto-retry for transient failures
+
+File structure:
+lib/core/error/
+??? error_handler.dart
+??? error_boundary.dart
+??? error_messages.dart
+
+lib/core/components/
+??? offline_indicator.dart
+??? retry_widget.dart
+
+lib/core/utils/
+??? validators.dart
+
+Update all screens with proper error handling.
+Files to Create
+lib/core/error/error_handler.dart
+lib/core/error/error_boundary.dart
+lib/core/error/error_messages.dart
+lib/core/components/offline_indicator.dart
+lib/core/components/retry_widget.dart
+lib/core/utils/validators.dart
+Success Criteria
+* [ ] App handles network errors gracefully
+* [ ] Offline indicator shows when disconnected
+* [ ] Retry mechanisms work
+* [ ] Form validation comprehensive
+* [ ] Empty states display properly
+* [ ] Error messages are user-friendly
+* [ ] No unhandled exceptions crash the app
+* [ ] Session timeout handled gracefully
+
+Step 37: Performance Optimization
+Objective
+Optimize app performance for smooth user experience.
+Prerequisites
+* Completed Step 36
+Claude Prompt
+I need to optimize the admin dashboard for performance.
+
+Requirements:
+
+1. List performance:
+   - Implement proper ListView.builder with item extent
+   - Use RepaintBoundary for complex list items
+   - Implement pagination with preloading
+   - Cache list data appropriately
+
+2. Image optimization:
+   - Use CachedNetworkImage consistently
+   - Implement thumbnail loading
+   - Lazy load images
+   - Clear cache periodically
+
+3. State management optimization:
+   - Use select() for granular provider listening
+   - Avoid unnecessary rebuilds
+   - Implement proper dispose patterns
+
+4. Network optimization:
+   - Request caching
+   - Batch requests where possible
+   - Compress request/response data
+   - Connection pooling
+
+5. Memory management:
+   - Proper disposal of controllers
+   - Clear image cache when needed
+   - Monitor memory usage
+
+6. App startup optimization:
+   - Lazy load features
+   - Preload critical data
+   - Splash screen while loading
+
+7. Animation performance:
+   - Use AnimatedBuilder
+   - Avoid rebuilds during animation
+   - Use appropriate animation curves
+
+File structure:
+lib/core/utils/
+??? performance_utils.dart
+??? cache_manager.dart
+
+Profile the app and identify bottlenecks.
+Files to Create
+lib/core/utils/performance_utils.dart
+lib/core/utils/cache_manager.dart
+Success Criteria
+* [ ] Lists scroll smoothly at 60fps
+* [ ] Images load efficiently
+* [ ] No memory leaks
+* [ ] App startup time < 3 seconds
+* [ ] No jank during navigation
+* [ ] Animations are smooth
+* [ ] Memory usage reasonable
+
+Step 38: Integration Testing
+Objective
+Create comprehensive integration tests for all major flows.
+Prerequisites
+* Completed Step 37
+Claude Prompt
+I need to create integration tests for all major user flows.
+
+Requirements:
+
+1. Test flows:
+   - Login flow (success, failure, 2FA)
+   - Driver approval flow (approve, reject, request docs)
+   - Payment refund flow
+   - Dispute resolution flow
+   - Message sending flow
+   - Bank verification flow
+
+2. Test helpers:
+   - Login helper (authenticate for tests)
+   - Navigation helper
+   - Test data generators
+
+3. Mock services:
+   - Mock Supabase responses
+   - Mock FCM
+   - Mock bank verification API
+
+4. Test categories:
+   - Unit tests for business logic
+   - Widget tests for UI components
+   - Integration tests for flows
+   - Golden tests for UI consistency
+
+5. CI/CD integration:
+   - GitHub Actions workflow for tests
+   - Test coverage reporting
+
+File structure:
+test/
+??? unit/
+??? widget/
+??? integration/
+
+integration_test/
+??? app_test.dart
+??? authentication_test.dart
+??? driver_approval_test.dart
+??? payment_refund_test.dart
+??? dispute_resolution_test.dart
+??? helpers/
+    ??? login_helper.dart
+    ??? test_data.dart
+
+.github/workflows/
+??? tests.yml
+Files to Create
+integration_test/app_test.dart
+integration_test/authentication_test.dart
+integration_test/driver_approval_test.dart
+integration_test/payment_refund_test.dart
+integration_test/dispute_resolution_test.dart
+integration_test/helpers/login_helper.dart
+integration_test/helpers/test_data.dart
+.github/workflows/tests.yml
+test/unit/ (various test files)
+test/widget/ (various test files)
+Success Criteria
+* [ ] All integration tests pass
+* [ ] Login flow test passes
+* [ ] Driver approval flow test passes
+* [ ] Payment refund flow test passes
+* [ ] Dispute resolution flow test passes
+* [ ] Tests run in CI pipeline
+* [ ] Test coverage > 70% for critical paths
+
+Step 39: Production Build & Deployment
+Objective
+Create production builds and deploy the LoadRunner Admin Dashboard.
+Prerequisites
+* Completed all previous steps
+* All tests passing
+Claude Prompt
+I need to prepare the LoadRunner Admin Dashboard for production deployment.
+
+Requirements:
+
+1. Environment Configuration:
+   - Create .env.production with production values
+   - Configure production Supabase URL and keys
+   - Configure production Firebase project
+   - Configure production Paystack keys
+
+2. Android Production Build:
+   - Configure app signing (keystore)
+   - Update version in pubspec.yaml (1.0.0)
+   - Configure ProGuard rules
+   - Build release APK and App Bundle
+   - Test release build thoroughly
+
+3. iOS Production Build:
+   - Configure provisioning profiles
+   - Update version
+   - Set deployment target
+   - Build release IPA
+   - Test release build
+
+4. Security Checklist:
+   - Remove all debug logs
+   - Remove test/development code
+   - Verify no hardcoded credentials
+   - Enable code obfuscation
+   - Review API keys are restricted
+
+5. App Store Preparation:
+   - Create app icons (all sizes)
+   - Create splash screens
+   - Prepare screenshots
+   - Write app description
+   - Prepare privacy policy
+
+6. Deployment:
+   - Upload to Google Play Console (Internal Testing)
+   - Upload to Apple TestFlight
+   - Internal testing phase
+   - Beta testing phase
+   - Production release
+
+7. Monitoring Setup:
+   - Firebase Crashlytics
+   - Firebase Analytics
+   - Error monitoring
+
+8. Documentation:
+   - Admin user guide
+   - Deployment guide
+   - Troubleshooting guide
+
+File structure:
+.env.production
+android/app/key.properties
+android/app/proguard-rules.pro
+docs/
+??? admin_user_guide.md
+??? deployment_guide.md
+??? troubleshooting_guide.md
+Files to Create/Modify
+.env.production
+android/app/key.properties
+android/app/proguard-rules.pro
+android/app/build.gradle (MODIFY)
+ios/Runner/Info.plist (MODIFY)
+pubspec.yaml (MODIFY - version 1.0.0)
+docs/admin_user_guide.md
+docs/deployment_guide.md
+docs/troubleshooting_guide.md
+docs/release_notes_v1.0.0.md
+Success Criteria
+* [ ] Production environment configured
+* [ ] Android release APK builds successfully
+* [ ] Android App Bundle builds successfully
+* [ ] iOS release IPA builds successfully
+* [ ] Release builds tested and working
+* [ ] No debug code in production
+* [ ] Code obfuscated
+* [ ] All credentials secure
+* [ ] Crashlytics configured
+* [ ] Analytics configured
+* [ ] App uploaded to Play Console
+* [ ] App uploaded to TestFlight
+* [ ] Documentation complete
+* [ ] Beta testing successful
+* [ ] PRODUCTION RELEASE ??
+
+COMPLETION CHECKLIST
+Phase 1: Foundation ?
+* [ ] Step 1: Project Setup & Architecture
+* [ ] Step 2: Database Schema Migration
+* [ ] Step 3: Environment & Dependencies
+* [ ] Step 4: Core Services Setup
+Phase 2: Authentication ?
+* [ ] Step 5: Admin Authentication System
+* [ ] Step 6: Login Screen & 2FA
+* [ ] Step 7: Session Management
+Phase 3: App Shell & Navigation ?
+* [ ] Step 8: Main Navigation Structure
+* [ ] Step 9: Theme & Design System
+* [ ] Step 10: Dashboard Home Screen
+Phase 4: User Management - Drivers ?
+* [ ] Step 11: Driver List & Filtering
+* [ ] Step 12: Driver Profile View
+* [ ] Step 13: Document Viewer Component
+* [ ] Step 14: Approval Workflow
+* [ ] Step 15: Vehicle Management
+Phase 5: Statistics & Analytics ?
+* [ ] Step 16: Dashboard Overview Stats
+* [ ] Step 17: Activity Metrics
+* [ ] Step 18: Financial Metrics
+* [ ] Step 19: Performance & Growth Metrics
+* [ ] Step 20: Charts & Visualizations
+Phase 6: Payment Management ?
+* [ ] Step 21: Transactions List
+* [ ] Step 22: Transaction Details & Refunds
+* [ ] Step 23: Failed Payments Handling
+Phase 7: Bank Verification ?
+* [ ] Step 24: Bank Verification UI
+* [ ] Step 25: Third-Party API Integration
+Phase 8: Communication ?
+* [ ] Step 26: In-App Messaging
+* [ ] Step 27: Push Notifications
+* [ ] Step 28: Message Templates
+Phase 9: Dispute Resolution ?
+* [ ] Step 29: Disputes List
+* [ ] Step 30: Dispute Details & Resolution
+* [ ] Step 31: Evidence Management
+Phase 10: Additional Features ?
+* [ ] Step 32: SMS Usage Tracking
+* [ ] Step 33: Shipper Management (View Only)
+* [ ] Step 34: Audit Logs Viewer
+* [ ] Step 35: User Suspension System
+Phase 11: Polish & Testing ?
+* [ ] Step 36: Error Handling & Edge Cases
+* [ ] Step 37: Performance Optimization
+* [ ] Step 38: Integration Testing
+* [ ] Step 39: Production Build & Deployment
+
+APPENDIX
+Key Database Facts (IMPORTANT!)
+ConceptRealityNOTAdmin accountsusers table with role='Admin'~~admin_users table~~Driver accountsusers table with role='Driver'~~drivers table~~Driver documentsdriver_docs table with doc_type~~columns on drivers table~~Shipmentsfreight_posts table~~shipments table~~Bank accountsdriver_bank_accounts only~~shipper_bank_accounts~~Shipper approvalAuto-approved on sign-in~~Approval workflow~~Verification statusverification_status ENUM~~TEXT field~~Recommended Development Flow
+Week-by-Week Focus:
+* Weeks 1-2: Foundation and authentication (Steps 1-7)
+* Weeks 3-4: Navigation and dashboard (Steps 8-10)
+* Weeks 5-7: User management (Steps 11-15)
+* Weeks 8-9: Analytics (Steps 16-20)
+* Weeks 10-11: Payments (Steps 21-23)
+* Week 12: Bank verification (Steps 24-25)
+* Week 13: Communication (Steps 26-28)
+* Weeks 14-15: Disputes (Steps 29-31)
+* Week 16: Additional features (Steps 32-35)
+* Week 17: Polish, testing, deployment (Steps 36-39)
+Key Principles
+1. Complete each step fully before moving to next
+2. Test each feature as you build it
+3. Commit to git after each completed step
+4. Create pull requests for review
+5. Update documentation as you build
+6. Handle errors from the start
+7. Write clean, maintainable code
+8. Follow Clean Architecture principles
+9. Keep performance in mind
+10. Security first
+Support Resources
+* Spec document: ADMIN_DASHBOARD_SPEC_v1.1.md
+* Flutter docs: https://flutter.dev
+* Supabase docs: https://supabase.com/docs
+* Riverpod docs: https://riverpod.dev
+* fl_chart docs: https://pub.dev/packages/fl_chart
+
+Good luck building the LoadRunner Admin Dashboard! ??
+
