@@ -10,7 +10,6 @@ import '../providers/document_queue_providers.dart';
 import '../providers/document_review_providers.dart';
 import '../widgets/document_reject_dialog.dart';
 import '../widgets/document_reupload_dialog.dart';
-import '../widgets/document_flag_dialog.dart';
 import '../widgets/status_badge.dart';
 
 /// Full-screen document review screen with zoom, driver context panel,
@@ -290,42 +289,6 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
       final state = ref.read(documentReviewNotifierProvider);
       _showSnackBar(
         state.actionError ?? 'Failed to request re-upload',
-        isError: true,
-      );
-    }
-  }
-
-  Future<void> _handleFlag() async {
-    final doc = _document;
-    if (doc == null) return;
-
-    final result = await DocumentFlagDialog.show(
-      context: context,
-      docTypeLabel: doc.label,
-    );
-
-    if (result == null || !mounted) return;
-
-    final success = await ref
-        .read(documentReviewNotifierProvider.notifier)
-        .flagDocument(
-          documentId: doc.id,
-          driverId: _driverId,
-          docType: doc.docType,
-          flagReason: result.reason,
-          flagNotes: result.notes,
-        );
-
-    if (success && mounted) {
-      _showSnackBar('Document flagged');
-      ref
-          .read(documentQueueNotifierProvider.notifier)
-          .removeDocument(doc.id);
-      Navigator.of(context).pop(true);
-    } else if (mounted) {
-      final state = ref.read(documentReviewNotifierProvider);
-      _showSnackBar(
-        state.actionError ?? 'Failed to flag document',
         isError: true,
       );
     }
@@ -639,19 +602,6 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
               // Action buttons
               Row(
                 children: [
-                  // Flag button
-                  IconButton(
-                    onPressed: isLoading ? null : _handleFlag,
-                    icon: const Icon(Icons.flag_outlined),
-                    color: Colors.amber,
-                    iconSize: 28,
-                    tooltip: 'Flag document',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.amber.withValues(alpha: 0.15),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
                   // Reject button
                   Expanded(
                     child: OutlinedButton.icon(
@@ -688,13 +638,15 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
 
                   // Approve button
                   Expanded(
-                    child: FilledButton.icon(
+                    child: OutlinedButton.icon(
                       onPressed: isLoading ? null : _handleApprove,
                       icon: const Icon(Icons.check, size: 18),
                       label: const Text('Approve'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green[300],
+                        side: BorderSide(
+                          color: Colors.green[300]!.withValues(alpha: 0.5),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
