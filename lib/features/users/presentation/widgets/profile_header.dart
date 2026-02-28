@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -47,7 +48,7 @@ class ProfileHeader extends StatelessWidget {
                     radius: 50,
                     backgroundColor: Colors.white.withOpacity(0.2),
                     backgroundImage: profile.profilePhotoUrl != null
-                        ? NetworkImage(profile.profilePhotoUrl!)
+                        ? CachedNetworkImageProvider(profile.profilePhotoUrl!)
                         : null,
                     child: profile.profilePhotoUrl == null
                         ? Text(

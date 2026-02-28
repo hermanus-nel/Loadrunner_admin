@@ -34,9 +34,7 @@ class DriverDocument extends Equatable {
   String get label {
     switch (docType.toLowerCase()) {
       case 'license_front':
-        return 'License (Front)';
-      case 'license_back':
-        return 'License (Back)';
+        return 'Driver\'s License';
       case 'id_document':
       case 'id_front':
         return 'ID Document';
@@ -55,7 +53,7 @@ class DriverDocument extends Equatable {
       case 'roadworthy_certificate':
         return 'Roadworthy Certificate';
       case 'pdp':
-        return 'PDP (Public Driving Permit)';
+        return 'Professional Driving Permit (PDP)';
       default:
         return docType.replaceAll('_', ' ').split(' ').map((word) {
           if (word.isEmpty) return word;

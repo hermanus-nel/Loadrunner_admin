@@ -34,7 +34,15 @@ class AuditLogEntity extends Equatable {
 
   /// Get human-readable action description
   String get actionDescription {
-    return AuditAction.fromString(action).displayName;
+    final auditAction = AuditAction.fromString(action);
+    if (auditAction != AuditAction.unknown) {
+      return auditAction.displayName;
+    }
+    // Format raw action string: "some_new_action" → "Some New Action"
+    return action
+        .split('_')
+        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
   }
 
   /// Get action category for grouping/filtering
@@ -84,6 +92,35 @@ class AuditLogEntity extends Equatable {
   /// Get target type display name
   String get targetTypeDisplay {
     return AuditTargetType.fromString(targetType).displayName;
+  }
+
+  /// Try to extract a meaningful target name from old/new values
+  String? get targetName {
+    final values = newValues ?? oldValues;
+    if (values == null) return null;
+
+    // Try common name fields
+    final firstName = values['first_name'] as String?;
+    final lastName = values['last_name'] as String?;
+    if (firstName != null || lastName != null) {
+      return [firstName, lastName]
+          .where((s) => s != null && s.isNotEmpty)
+          .join(' ');
+    }
+
+    final name = values['name'] as String?;
+    if (name != null && name.isNotEmpty) return name;
+
+    final companyName = values['company_name'] as String?;
+    if (companyName != null && companyName.isNotEmpty) return companyName;
+
+    final email = values['email'] as String?;
+    if (email != null && email.isNotEmpty) return email;
+
+    final title = values['title'] as String?;
+    if (title != null && title.isNotEmpty) return title;
+
+    return null;
   }
 
   factory AuditLogEntity.fromJson(Map<String, dynamic> json) {
@@ -240,7 +277,7 @@ enum AuditAction {
   adminLogout('admin_logout', 'Admin Logout', AuditActionCategory.auth, '🚪'),
   
   // Generic
-  unknown('unknown', 'Unknown Action', AuditActionCategory.other, '?');
+  unknown('unknown', 'Unknown Action', AuditActionCategory.other, '•');
 
   final String value;
   final String displayName;

@@ -204,6 +204,7 @@ class _DriversListScreenState extends ConsumerState<DriversListScreen>
     // Drivers list
     return ListView.builder(
       controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacingSm),
       itemCount: state.drivers.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -227,8 +228,8 @@ class _DriversListScreenState extends ConsumerState<DriversListScreen>
   }
 
   Widget _buildEmptyState(
-    BuildContext context, 
-    DriversListState state, 
+    BuildContext context,
+    DriversListState state,
     bool isDark,
   ) {
     String message;
@@ -258,40 +259,50 @@ class _DriversListScreenState extends ConsumerState<DriversListScreen>
       }
     }
 
-    return Center(
-      child: Padding(
-        padding: AppDimensions.pagePadding,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
-            ),
-            const SizedBox(height: AppDimensions.spacingMd),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: AppDimensions.pagePadding,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 64,
                     color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiaryLight,
                   ),
-              textAlign: TextAlign.center,
-            ),
-            if (state.searchQuery.isNotEmpty) ...[
-              const SizedBox(height: AppDimensions.spacingMd),
-              TextButton.icon(
-                onPressed: () {
-                  ref.read(driversListNotifierProvider.notifier).clearSearch();
-                },
-                icon: const Icon(Icons.clear),
-                label: const Text('Clear search'),
+                  const SizedBox(height: AppDimensions.spacingMd),
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (state.searchQuery.isNotEmpty) ...[
+                    const SizedBox(height: AppDimensions.spacingMd),
+                    TextButton.icon(
+                      onPressed: () {
+                        ref
+                            .read(driversListNotifierProvider.notifier)
+                            .clearSearch();
+                      },
+                      icon: const Icon(Icons.clear),
+                      label: const Text('Clear search'),
+                    ),
+                  ],
+                ],
               ),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
     );
@@ -463,6 +474,7 @@ class _DriversListScreenContentState
     // Drivers list
     return ListView.builder(
       controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacingSm),
       itemCount: state.drivers.length + (state.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
@@ -514,38 +526,48 @@ class _DriversListScreenContentState
       }
     }
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 64,
-            color: isDark
-                ? AppColors.textTertiaryDark
-                : AppColors.textTertiaryLight,
-          ),
-          const SizedBox(height: AppDimensions.spacingMd),
-          Text(
-            message,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 64,
                   color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
+                      ? AppColors.textTertiaryDark
+                      : AppColors.textTertiaryLight,
                 ),
-            textAlign: TextAlign.center,
-          ),
-          if (state.searchQuery.isNotEmpty) ...[
-            const SizedBox(height: AppDimensions.spacingMd),
-            TextButton.icon(
-              onPressed: () {
-                ref.read(driversListNotifierProvider.notifier).clearSearch();
-              },
-              icon: const Icon(Icons.clear),
-              label: const Text('Clear search'),
+                const SizedBox(height: AppDimensions.spacingMd),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                if (state.searchQuery.isNotEmpty) ...[
+                  const SizedBox(height: AppDimensions.spacingMd),
+                  TextButton.icon(
+                    onPressed: () {
+                      ref
+                          .read(driversListNotifierProvider.notifier)
+                          .clearSearch();
+                    },
+                    icon: const Icon(Icons.clear),
+                    label: const Text('Clear search'),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

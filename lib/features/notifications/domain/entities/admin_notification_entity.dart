@@ -1,158 +1,193 @@
 import 'package:flutter/material.dart';
 
-/// Admin notification types matching the DB notification_type enum.
+/// Admin notification types matching the DB admin_event_type enum.
 enum AdminNotificationType {
-  disputeFiled,
+  newUser,
+  newShipment,
+  paymentCompleted,
+  driverRegistered,
+  disputeLodged,
+  driverPayout,
   disputeEscalated,
   disputeResolved,
-  driverPendingApproval,
   driverDocumentUploaded,
   driverSuspended,
-  paymentFailed,
-  paymentRefundRequested,
-  adminSystemAlert;
+  vehicleAdded,
+  vehicleDocumentUploaded;
 
   /// Parse from database string.
   static AdminNotificationType fromString(String value) {
     switch (value) {
-      case 'dispute_filed':
-        return AdminNotificationType.disputeFiled;
+      case 'new_user':
+        return AdminNotificationType.newUser;
+      case 'new_shipment':
+        return AdminNotificationType.newShipment;
+      case 'payment_completed':
+        return AdminNotificationType.paymentCompleted;
+      case 'driver_registered':
+        return AdminNotificationType.driverRegistered;
+      case 'dispute_lodged':
+        return AdminNotificationType.disputeLodged;
+      case 'driver_payout':
+        return AdminNotificationType.driverPayout;
       case 'dispute_escalated':
         return AdminNotificationType.disputeEscalated;
       case 'dispute_resolved':
         return AdminNotificationType.disputeResolved;
-      case 'driver_pending_approval':
-        return AdminNotificationType.driverPendingApproval;
       case 'driver_document_uploaded':
         return AdminNotificationType.driverDocumentUploaded;
       case 'driver_suspended':
         return AdminNotificationType.driverSuspended;
-      case 'payment_failed':
-        return AdminNotificationType.paymentFailed;
-      case 'payment_refund_requested':
-        return AdminNotificationType.paymentRefundRequested;
-      case 'admin_system_alert':
-        return AdminNotificationType.adminSystemAlert;
+      case 'vehicle_added':
+        return AdminNotificationType.vehicleAdded;
+      case 'vehicle_document_uploaded':
+        return AdminNotificationType.vehicleDocumentUploaded;
       default:
-        return AdminNotificationType.adminSystemAlert;
+        return AdminNotificationType.newUser;
     }
   }
 
   /// Convert to database string.
   String toJson() {
     switch (this) {
-      case AdminNotificationType.disputeFiled:
-        return 'dispute_filed';
+      case AdminNotificationType.newUser:
+        return 'new_user';
+      case AdminNotificationType.newShipment:
+        return 'new_shipment';
+      case AdminNotificationType.paymentCompleted:
+        return 'payment_completed';
+      case AdminNotificationType.driverRegistered:
+        return 'driver_registered';
+      case AdminNotificationType.disputeLodged:
+        return 'dispute_lodged';
+      case AdminNotificationType.driverPayout:
+        return 'driver_payout';
       case AdminNotificationType.disputeEscalated:
         return 'dispute_escalated';
       case AdminNotificationType.disputeResolved:
         return 'dispute_resolved';
-      case AdminNotificationType.driverPendingApproval:
-        return 'driver_pending_approval';
       case AdminNotificationType.driverDocumentUploaded:
         return 'driver_document_uploaded';
       case AdminNotificationType.driverSuspended:
         return 'driver_suspended';
-      case AdminNotificationType.paymentFailed:
-        return 'payment_failed';
-      case AdminNotificationType.paymentRefundRequested:
-        return 'payment_refund_requested';
-      case AdminNotificationType.adminSystemAlert:
-        return 'admin_system_alert';
+      case AdminNotificationType.vehicleAdded:
+        return 'vehicle_added';
+      case AdminNotificationType.vehicleDocumentUploaded:
+        return 'vehicle_document_uploaded';
     }
   }
 
   String get displayName {
     switch (this) {
-      case AdminNotificationType.disputeFiled:
+      case AdminNotificationType.newUser:
+        return 'New User';
+      case AdminNotificationType.newShipment:
+        return 'New Shipment';
+      case AdminNotificationType.paymentCompleted:
+        return 'Payment Completed';
+      case AdminNotificationType.driverRegistered:
+        return 'Driver Registered';
+      case AdminNotificationType.disputeLodged:
         return 'Dispute Filed';
+      case AdminNotificationType.driverPayout:
+        return 'Driver Payout';
       case AdminNotificationType.disputeEscalated:
         return 'Dispute Escalated';
       case AdminNotificationType.disputeResolved:
         return 'Dispute Resolved';
-      case AdminNotificationType.driverPendingApproval:
-        return 'Driver Pending Approval';
       case AdminNotificationType.driverDocumentUploaded:
         return 'Document Uploaded';
       case AdminNotificationType.driverSuspended:
         return 'Driver Suspended';
-      case AdminNotificationType.paymentFailed:
-        return 'Payment Failed';
-      case AdminNotificationType.paymentRefundRequested:
-        return 'Refund Requested';
-      case AdminNotificationType.adminSystemAlert:
-        return 'System Alert';
+      case AdminNotificationType.vehicleAdded:
+        return 'Vehicle Added';
+      case AdminNotificationType.vehicleDocumentUploaded:
+        return 'Vehicle Document Uploaded';
     }
   }
 
   IconData get icon {
     switch (this) {
-      case AdminNotificationType.disputeFiled:
+      case AdminNotificationType.newUser:
+        return Icons.person_add;
+      case AdminNotificationType.newShipment:
+        return Icons.local_shipping;
+      case AdminNotificationType.paymentCompleted:
+        return Icons.payment;
+      case AdminNotificationType.driverRegistered:
+        return Icons.how_to_reg;
+      case AdminNotificationType.disputeLodged:
         return Icons.gavel;
+      case AdminNotificationType.driverPayout:
+        return Icons.account_balance_wallet;
       case AdminNotificationType.disputeEscalated:
         return Icons.priority_high;
       case AdminNotificationType.disputeResolved:
         return Icons.check_circle;
-      case AdminNotificationType.driverPendingApproval:
-        return Icons.person_add;
       case AdminNotificationType.driverDocumentUploaded:
         return Icons.upload_file;
       case AdminNotificationType.driverSuspended:
         return Icons.person_off;
-      case AdminNotificationType.paymentFailed:
-        return Icons.money_off;
-      case AdminNotificationType.paymentRefundRequested:
-        return Icons.request_quote;
-      case AdminNotificationType.adminSystemAlert:
-        return Icons.warning_amber;
+      case AdminNotificationType.vehicleAdded:
+        return Icons.directions_car;
+      case AdminNotificationType.vehicleDocumentUploaded:
+        return Icons.description;
     }
   }
 
   Color get color {
     switch (this) {
-      case AdminNotificationType.disputeFiled:
+      case AdminNotificationType.newUser:
+        return Colors.blue;
+      case AdminNotificationType.newShipment:
+        return Colors.indigo;
+      case AdminNotificationType.paymentCompleted:
+        return Colors.green;
+      case AdminNotificationType.driverRegistered:
+        return Colors.blue;
+      case AdminNotificationType.disputeLodged:
         return Colors.orange;
+      case AdminNotificationType.driverPayout:
+        return Colors.teal;
       case AdminNotificationType.disputeEscalated:
         return Colors.red;
       case AdminNotificationType.disputeResolved:
         return Colors.green;
-      case AdminNotificationType.driverPendingApproval:
-        return Colors.blue;
       case AdminNotificationType.driverDocumentUploaded:
         return Colors.teal;
       case AdminNotificationType.driverSuspended:
         return Colors.red;
-      case AdminNotificationType.paymentFailed:
-        return Colors.red;
-      case AdminNotificationType.paymentRefundRequested:
-        return Colors.orange;
-      case AdminNotificationType.adminSystemAlert:
-        return Colors.purple;
+      case AdminNotificationType.vehicleAdded:
+        return Colors.indigo;
+      case AdminNotificationType.vehicleDocumentUploaded:
+        return Colors.teal;
     }
   }
 }
 
-/// Represents a notification record from the notifications table.
+/// Represents a notification record from the admin_event_notifications table.
 class AdminNotificationEntity {
   final String id;
-  final String userId;
+  final String adminId;
+  final AdminNotificationType eventType;
   final String message;
   final bool isRead;
   final bool archived;
-  final AdminNotificationType? type;
   final String? relatedId;
+  final Map<String, dynamic>? metadata;
   final String? deliveryMethod;
   final DateTime? sentAt;
   final DateTime createdAt;
 
   const AdminNotificationEntity({
     required this.id,
-    required this.userId,
+    required this.adminId,
+    required this.eventType,
     required this.message,
     required this.isRead,
     required this.archived,
-    this.type,
     this.relatedId,
+    this.metadata,
     this.deliveryMethod,
     this.sentAt,
     required this.createdAt,
@@ -164,20 +199,18 @@ class AdminNotificationEntity {
   }) {
     return AdminNotificationEntity(
       id: id,
-      userId: userId,
+      adminId: adminId,
+      eventType: eventType,
       message: message,
       isRead: isRead ?? this.isRead,
       archived: archived ?? this.archived,
-      type: type,
       relatedId: relatedId,
+      metadata: metadata,
       deliveryMethod: deliveryMethod,
       sentAt: sentAt,
       createdAt: createdAt,
     );
   }
-
-  /// Check if this is an admin-specific notification type.
-  bool get isAdminType => type != null;
 
   /// Time ago formatted string.
   String get timeAgo {

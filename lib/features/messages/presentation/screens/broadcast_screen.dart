@@ -426,19 +426,28 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
               ),
             ),
             const SizedBox(width: 16),
-            FilledButton.icon(
+            OutlinedButton.icon(
               onPressed: _isSending ? null : _confirmAndSend,
               icon: _isSending
                   ? const SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.send),
+                  : const Icon(Icons.send, size: 18),
               label: Text(_showPreview ? 'Send Broadcast' : 'Preview & Send'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: theme.colorScheme.onPrimary,
+                backgroundColor: theme.colorScheme.primary,
+                side: BorderSide(color: theme.colorScheme.primary),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         ),

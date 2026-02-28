@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/components/document_viewer_screen.dart';
+import '../../../../core/components/loading_state.dart';
 import '../../../../core/components/document_viewer_state.dart';
 import '../../../messages/domain/entities/message_entity.dart';
 import '../../domain/entities/vehicle_entity.dart';
@@ -213,7 +214,23 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
     final colorScheme = theme.colorScheme;
 
     if (state.isLoading && state.vehicle == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Photo gallery shimmer
+            ShimmerPlaceholder(width: double.infinity, height: 200),
+            SizedBox(height: 16),
+            // Vehicle info shimmer
+            ShimmerCard(height: 120),
+            SizedBox(height: 12),
+            // Details shimmer
+            ShimmerCard(height: 140),
+            SizedBox(height: 12),
+            ShimmerCard(height: 100),
+          ],
+        ),
+      );
     }
 
     if (state.error != null && state.vehicle == null) {
@@ -562,36 +579,86 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
   }
 
   Widget _buildDriverInfoSection(BuildContext context, VehicleEntity vehicle) {
-    return InfoSection(
-      title: 'Driver Information',
-      icon: Icons.person_outline,
-      trailing: Wrap(
-        spacing: 8,
+    final theme = Theme.of(context);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Driver Information',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                ActionChip(
+                  avatar: const Icon(Icons.message_outlined, size: 16),
+                  label: const Text('Message'),
+                  onPressed: () => _navigateToMessageDriver(vehicle),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 8),
+                ActionChip(
+                  avatar: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('Profile'),
+                  onPressed: () => context.push('/users/driver/${vehicle.driverId}'),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            if (vehicle.driverName != null)
+              _buildDriverInfoRow(theme, 'Name', vehicle.driverName!),
+            if (vehicle.driverPhone != null)
+              _buildDriverInfoRow(theme, 'Phone', vehicle.driverPhone!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDriverInfoRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ActionChip(
-            avatar: const Icon(Icons.message_outlined, size: 16),
-            label: const Text('Message'),
-            onPressed: () => _navigateToMessageDriver(vehicle),
-            visualDensity: VisualDensity.compact,
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
-          ActionChip(
-            avatar: const Icon(Icons.open_in_new, size: 16),
-            label: const Text('Profile'),
-            onPressed: () => context.push('/users/driver/${vehicle.driverId}'),
-            visualDensity: VisualDensity.compact,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
-      items: [
-        if (vehicle.driverName != null)
-          InfoItem(label: 'Name', value: vehicle.driverName!),
-        if (vehicle.driverPhone != null)
-          InfoItem(label: 'Phone', value: vehicle.driverPhone!),
-        InfoItem(
-          label: 'Driver ID',
-          value: vehicle.driverId,
-        ),
-      ],
     );
   }
 
@@ -684,10 +751,7 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
                   context,
                   doc.key,
                   doc.value!,
-                  () => _openDocumentViewer(
-                    documents.values.toList(),
-                    documents.keys.toList().indexOf(doc.key),
-                  ),
+                  vehicle.getDocStatus(doc.key),
                 );
               } else {
                 return _buildMissingDocumentTile(context, doc.key);
@@ -703,13 +767,53 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
     BuildContext context,
     String label,
     String url,
-    VoidCallback onTap,
+    String? docStatus,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Determine badge label and color based on per-doc status
+    String badgeLabel;
+    Color badgeColor;
+    switch (docStatus) {
+      case 'approved':
+        badgeLabel = 'Approved';
+        badgeColor = Colors.green;
+        break;
+      case 'rejected':
+        badgeLabel = 'Rejected';
+        badgeColor = Colors.red;
+        break;
+      case 'documents_requested':
+        badgeLabel = 'Re-upload Requested';
+        badgeColor = Colors.orange;
+        break;
+      case 'pending':
+        badgeLabel = 'Pending Review';
+        badgeColor = Colors.orange;
+        break;
+      default:
+        badgeLabel = 'Pending Review';
+        badgeColor = Colors.orange;
+        break;
+    }
+
+    // Append doc status as query param to bust HTTP / CDN caches when the
+    // driver re-uploads to the same storage path (URL unchanged, status flips).
+    final separator = url.contains('?') ? '&' : '?';
+    final cacheBustUrl = '$url${separator}v=${docStatus ?? 'unknown'}';
+
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        context.push(
+          '/users/vehicle/${widget.vehicleId}/document-review',
+          extra: {
+            'docType': label,
+            'docUrl': cacheBustUrl,
+            'currentStatus': docStatus,
+          },
+        );
+      },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -721,7 +825,8 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
                 width: 56,
                 height: 56,
                 child: CachedNetworkImage(
-                  imageUrl: url,
+                  imageUrl: cacheBustUrl,
+                  cacheKey: cacheBustUrl,
                   fit: BoxFit.cover,
                   placeholder: (context, _) => Container(
                     color: colorScheme.surfaceContainerHighest,
@@ -755,7 +860,7 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
                     ),
                   ),
                   Text(
-                    'Tap to view',
+                    'Tap to review',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.primary,
                     ),
@@ -766,14 +871,16 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: badgeColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: badgeColor.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
-                'Uploaded',
+                badgeLabel,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: Colors.green[700],
+                  color: badgeColor,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -983,7 +1090,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.blue,
               side: const BorderSide(color: Colors.blue),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           OutlinedButton.icon(
@@ -993,7 +1103,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
               side: BorderSide(color: theme.colorScheme.error),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           _buildApproveButton(vehicle, isProcessing),
@@ -1008,7 +1121,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.orange,
               side: const BorderSide(color: Colors.orange),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           OutlinedButton.icon(
@@ -1018,7 +1134,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
               side: BorderSide(color: theme.colorScheme.error),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           _buildApproveButton(vehicle, isProcessing),
@@ -1033,7 +1152,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.orange,
               side: const BorderSide(color: Colors.orange),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           OutlinedButton.icon(
@@ -1043,7 +1165,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: theme.colorScheme.error,
               side: BorderSide(color: theme.colorScheme.error),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           _buildApproveButton(vehicle, isProcessing),
@@ -1058,7 +1183,10 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.orange,
               side: const BorderSide(color: Colors.orange),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           _buildApproveButton(vehicle, isProcessing),
@@ -1073,14 +1201,17 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.brown,
               side: const BorderSide(color: Colors.brown),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ];
 
       case 'suspended':
         return [
-          FilledButton.icon(
+          OutlinedButton.icon(
             onPressed: isProcessing ? null : () => _handleReinstate(vehicle),
             icon: isProcessing
                 ? const SizedBox(
@@ -1088,15 +1219,18 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: Colors.green,
                     ),
                   )
                 : const Icon(Icons.restore, size: 18),
             label: const Text('Reinstate'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.green,
+              side: const BorderSide(color: Colors.green),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ];
@@ -1107,7 +1241,7 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
   }
 
   Widget _buildApproveButton(VehicleEntity vehicle, bool isProcessing) {
-    return FilledButton.icon(
+    return OutlinedButton.icon(
       onPressed: isProcessing ? null : () => _handleApprove(vehicle),
       icon: isProcessing
           ? const SizedBox(
@@ -1115,14 +1249,14 @@ class _VehicleDetailScreenState extends ConsumerState<VehicleDetailScreen> {
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: Colors.green,
               ),
             )
           : const Icon(Icons.check, size: 18),
       label: const Text('Approve'),
-      style: FilledButton.styleFrom(
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.green,
+        side: const BorderSide(color: Colors.green),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
     );

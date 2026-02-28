@@ -235,8 +235,36 @@ class SessionService {
       }
 
       _debugLog('Session user data:');
-      _debugLog('  - user ID: $_userId');
+      _debugLog('  - user ID (auth): $_userId');
       _debugLog('  - user phone: $_userPhone');
+
+      // Set auth header early so the lookup query works through RLS
+      supabaseClient.headers[_authHeader] = 'Bearer $_accessToken';
+      supabaseClient.headers['apikey'] = apiKey;
+
+      // Resolve canonical public.users.id by phone number.
+      // auth.users.id (from Edge Function) differs from public.users.id
+      // (auto-generated), and all app queries use public.users.id.
+      if (_userPhone != null) {
+        try {
+          final userRow = await supabaseClient
+              .from('users')
+              .select('id')
+              .eq('phone_number', _userPhone!)
+              .maybeSingle();
+          if (userRow != null && userRow['id'] != null) {
+            final publicUserId = userRow['id'] as String;
+            if (publicUserId != _userId) {
+              _debugLog(
+                'Resolved public.users.id: $publicUserId (was: $_userId)',
+              );
+              _userId = publicUserId;
+            }
+          }
+        } catch (e) {
+          _debugLog('Error resolving public user ID: $e');
+        }
+      }
 
       // Store tokens in secure storage
       await _secureStorage.write(key: _accessTokenKey, value: _accessToken);

@@ -1,5 +1,6 @@
 // lib/features/messages/presentation/screens/compose_message_screen.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -362,7 +363,7 @@ class _RecipientCard extends StatelessWidget {
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.primaryContainer,
           backgroundImage: recipient!.profilePhotoUrl != null
-              ? NetworkImage(recipient!.profilePhotoUrl!)
+              ? CachedNetworkImageProvider(recipient!.profilePhotoUrl!)
               : null,
           child: recipient!.profilePhotoUrl == null
               ? Text(

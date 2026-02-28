@@ -28,16 +28,20 @@ class DriverModel extends DriverEntity {
     final userData = json['users'] as Map<String, dynamic>?;
     
     // Determine verification status
+    // The column is `driver_verification_status` in the users table,
+    // but some queries may alias it as `verification_status`.
     DriverVerificationStatus status;
     final isVerified = json['is_verified'] as bool? ?? false;
-    final verificationStatusStr = json['verification_status'] as String?;
-    
+    final verificationStatusStr =
+        json['driver_verification_status'] as String? ??
+        json['verification_status'] as String?;
+
     if (verificationStatusStr != null) {
       status = DriverVerificationStatus.fromString(verificationStatusStr);
     } else {
       // Fallback to is_verified field
-      status = isVerified 
-          ? DriverVerificationStatus.approved 
+      status = isVerified
+          ? DriverVerificationStatus.approved
           : DriverVerificationStatus.pending;
     }
 
@@ -59,7 +63,7 @@ class DriverModel extends DriverEntity {
       driverLicenseExpiry: json['driver_license_expiry'] != null
           ? DateTime.tryParse(json['driver_license_expiry'] as String)
           : null,
-      vehicleCount: json['vehicle_count'] as int? ?? 0,
+      vehicleCount: _extractVehicleCount(json),
       createdAt: DateTime.parse(
         json['created_at'] as String? ?? DateTime.now().toIso8601String(),
       ),
@@ -67,6 +71,18 @@ class DriverModel extends DriverEntity {
           ? DateTime.tryParse(json['updated_at'] as String)
           : null,
     );
+  }
+
+  /// Extract vehicle count from joined vehicles(count) or fallback to vehicle_count field
+  static int _extractVehicleCount(Map<String, dynamic> json) {
+    // Handle Supabase resource embedding: vehicles(count) returns [{"count": N}]
+    final vehiclesData = json['vehicles'] as List<dynamic>?;
+    if (vehiclesData != null && vehiclesData.isNotEmpty) {
+      final first = vehiclesData[0] as Map<String, dynamic>;
+      return first['count'] as int? ?? 0;
+    }
+    // Fallback to direct vehicle_count field
+    return json['vehicle_count'] as int? ?? 0;
   }
 
   /// Create from Supabase query with separate user data
@@ -123,7 +139,7 @@ class DriverModel extends DriverEntity {
       'phone': phoneNumber,
       'email': email,
       'profile_photo_url': profilePhotoUrl,
-      'verification_status': verificationStatus.name,
+      'verification_status': verificationStatus.statusName,
       'is_verified': isVerified,
       'verified_at': verifiedAt?.toIso8601String(),
       'driver_license_number': driverLicenseNumber,

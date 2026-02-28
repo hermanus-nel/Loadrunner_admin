@@ -1,0 +1,390 @@
+C:.
+│   main.dart
+│   schema.sql
+│   test_workmanager.dart
+│
+├───core
+│   ├───components
+│   │       app_side_menu.dart
+│   │       currency_selector.dart
+│   │       currency_utils.dart
+│   │       custom_app_bar.dart
+│   │       custom_sliver_app_bar.dart
+│   │       date_range.dart
+│   │       driver_screen_wrapper.dart
+│   │       freight_items_section.dart
+│   │       freight_vehicles_section.dart
+│   │       global_fab_overlay.dart
+│   │       global_navigation_fab.dart
+│   │       permission_status_banner.dart
+│   │       tracking_conflict_dialog.dart
+│   │
+│   ├───config
+│   │       paystack_config.dart
+│   │       sa_bank_codes.dart
+│   │
+│   ├───error
+│   │       failures.dart
+│   │
+│   ├───services
+│   │       alarm_tracking_service.dart
+│   │       background_location_service.dart
+│   │       battery_optimization_service.dart
+│   │       bulksms_service.dart
+│   │       connectivity_service.dart
+│   │       core_providers.dart
+│   │       currency_service.dart
+│   │       eta_update_service.dart
+│   │       fcm_service.dart
+│   │       foreground_tracking_service.dart
+│   │       jwt_recovery_handler.dart
+│   │       paystack_payment_service.dart
+│   │       permission_monitoring_service.dart
+│   │       session_service.dart
+│   │       supabase_provider.dart
+│   │       tracking_diagnostics.dart
+│   │       tracking_queue_service.dart
+│   │       tracking_startup_validator.dart
+│   │       tracking_state_persistence_service.dart
+│   │       wake_lock_service.dart
+│   │       workmanager_tracking_service.dart
+│   │
+│   ├───theme
+│   │       theme.dart
+│   │       theme_state.dart
+│   │
+│   └───utils
+└───features
+    │   test.txt
+    │
+    ├───auth
+    │   │   claude.md
+    │   │
+    │   ├───data
+    │   │   └───services
+    │   │           auth_service.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       auth_notifier.dart
+    │       │       auth_provider.dart
+    │       │       auth_state.dart
+    │       │
+    │       └───screens
+    │               signup_screen.dart
+    │
+    ├───bid
+    │   │   claude.md
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   │       bid_model.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           bid_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       bid_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           bid_repository.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       bid_providers.dart
+    │       │       bid_submission_provider.dart
+    │       │       my_bids_provider.dart
+    │       │
+    │       ├───screens
+    │       │       bid_on_shipment_screen.dart
+    │       │       document_viewer_screen.dart
+    │       │       driver_verification_screen.dart
+    │       │       my_bids_screen.dart
+    │       │       shipper_bid_management_screen.dart
+    │       │
+    │       └───widgets
+    │               document_list_widget.dart
+    │               document_thumbnail_widget.dart
+    │               driver_bid_details_dialog.dart
+    │               flag_document_dialog.dart
+    │               my_bids_tile.dart
+    │               shipper_bid_management_tile.dart
+    │               update_bid_dialog.dart
+    │
+    ├───location
+    │   ├───data
+    │   │   └───services
+    │   │           location_service_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       location_data.dart
+    │   │   │       location_entity.dart
+    │   │   │
+    │   │   ├───repositories
+    │   │   │       location_repository.dart
+    │   │   │
+    │   │   └───services
+    │   │           location_service.dart
+    │   │
+    │   └───presentation
+    │       └───providers
+    │               location_providers.dart
+    │
+    ├───navigation
+    │   └───presentation
+    │       └───providers
+    │               active_delivery_provider.dart
+    │
+    ├───notifications
+    │   │   claude.md
+    │   │
+    │   ├───data
+    │   │   └───repositories
+    │   │           notification_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       notification_categories.dart
+    │   │   │       notification_entity.dart
+    │   │   │       notification_preference_entity.dart
+    │   │   │
+    │   │   ├───models
+    │   │   │       notification_performance_config.dart
+    │   │   │
+    │   │   ├───repositories
+    │   │   │       notification_repository.dart
+    │   │   │
+    │   │   └───services
+    │   │           notification_service.dart
+    │   │           notification_service_impl.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       notification_notifier.dart
+    │       │       notification_providers.dart
+    │       │       notification_state.dart
+    │       │
+    │       ├───screens
+    │       │       notifications_screen.dart
+    │       │
+    │       └───widgets
+    │               notification_badge.dart
+    │               notification_preferences_sheet.dart
+    │
+    ├───payment
+    │   ├───data
+    │   │   ├───repositories
+    │   │   │       payment_repository_impl.dart
+    │   │   │
+    │   │   └───services
+    │   │           payment_edge_function_service.dart
+    │   │           paystack_payment_service.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       driver_bank_account_entity.dart
+    │   │   │       entities.dart
+    │   │   │       escrow_entity.dart
+    │   │   │       payment_entity.dart
+    │   │   │       transfer_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           payment_repository.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       payment_notifier.dart
+    │       │       payment_providers.dart
+    │       │
+    │       ├───screens
+    │       │       paystack_checkout_screen.dart
+    │       │
+    │       └───widgets
+    │               payment_confirmation_dialog.dart
+    │
+    ├───rating
+    │   ├───data
+    │   │   └───repositories
+    │   │           rating_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       rating_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           rating_repository.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       rating_provider.dart
+    │       │
+    │       └───screens
+    │               driver_rating_screen.dart
+    │
+    ├───shipments
+    │   │   claude.md
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   │       freight_moving_model.dart
+    │   │   │       freight_rubble_model.dart
+    │   │   │       freight_vehicle_model.dart
+    │   │   │
+    │   │   ├───respositories
+    │   │   │       shipment_repository_impl.dart
+    │   │   │
+    │   │   ├───services
+    │   │   │       shipment_service_impl.dart
+    │   │   │
+    │   │   └───utils
+    │   │           date_utils.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       freight_type.dart
+    │   │   │       paginated_shipments.dart
+    │   │   │       shipment_entity.dart
+    │   │   │       shipment_item_entity.dart
+    │   │   │       shipment_moving_entity.dart
+    │   │   │       shipment_rubble_entity.dart
+    │   │   │       shipment_vehicle_entity.dart
+    │   │   │       sort_option.dart
+    │   │   │       tracking_event_entity.dart
+    │   │   │
+    │   │   ├───repositories
+    │   │   │       shipment_repository.dart
+    │   │   │
+    │   │   └───services
+    │   │           shipment_service.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       find_load_provider.dart
+    │       │       my_loads_provider.dart
+    │       │       shipment_notifier.dart
+    │       │       shipment_providers.dart
+    │       │       shipment_state.dart
+    │       │
+    │       ├───screens
+    │       │       add_shipment.dart
+    │       │       find_loads_screen.dart
+    │       │       my_loads_screen.dart
+    │       │       pickup_screen.dart
+    │       │       shipments_screen.dart
+    │       │       shipper_dashboard_screen.dart
+    │       │
+    │       └───widgets
+    │               archive_shipment_dialog.dart
+    │               find_load_tile.dart
+    │               load_information_modal.dart
+    │               my_loads_tile.dart
+    │               shipment_tile.dart
+    │               shipment_tracking_sheet.dart
+    │
+    ├───tracking
+    │   │   claude.md
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   │       driver_tracking_session_model.dart
+    │   │   │       shipment_tracking_metrics_model.dart
+    │   │   │       tracking_point_model.dart
+    │   │   │
+    │   │   ├───repositories
+    │   │   │       tracking_repository_impl.dart
+    │   │   │
+    │   │   └───services
+    │   │           postgis_tracking_service.dart
+    │   │           realtime_tracking_service.dart
+    │   │           roads_snapping_service.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       driver_tracking_session_entity.dart
+    │   │   │       movement_state.dart
+    │   │   │       shipment_tracking_metrics_entity.dart
+    │   │   │       tracking_config.dart
+    │   │   │       tracking_point_entity.dart
+    │   │   │       tracking_quality_status.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           tracking_repository.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       realtime_tracking_provider.dart
+    │       │       tracking_providers.dart
+    │       │       tracking_state.dart
+    │       │
+    │       ├───screens
+    │       │       battery_optimization_screen.dart
+    │       │       shipment_tracking_screen.dart
+    │       │       system_health_monitor_screen.dart
+    │       │       tracking_diagnostics_screen.dart
+    │       │
+    │       └───widgets
+    │               active_shipments_panel.dart
+    │               connection_status_indicator.dart
+    │               custom_driver_marker.dart
+    │               tracking_info_panel.dart
+    │               tracking_map_widget.dart
+    │
+    ├───user
+    │   │   claude.md
+    │   │
+    │   ├───data
+    │   │   ├───models
+    │   │   │       flagged_document_model.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           flagged_document_repository_impl.dart
+    │   │           user_repository_impl.dart
+    │   │
+    │   ├───domain
+    │   │   ├───entities
+    │   │   │       document_entity.dart
+    │   │   │       flagged_document_entity.dart
+    │   │   │       user_entity.dart
+    │   │   │       vehicle_entity.dart
+    │   │   │
+    │   │   └───repositories
+    │   │           flagged_document_repository.dart
+    │   │           user_repository.dart
+    │   │
+    │   └───presentation
+    │       ├───providers
+    │       │       driver_profile_provider.dart
+    │       │       flagged_document_providers.dart
+    │       │       user_providers.dart
+    │       │
+    │       ├───screens
+    │       │       driver_profile_screen.dart
+    │       │       profile_screen.dart
+    │       │
+    │       ├───state
+    │       │       driver_profile_state.dart
+    │       │
+    │       └───widgets
+    │               banking_info_form.dart
+    │               document_upload_widget.dart
+    │               driver_stats_section.dart
+    │               personal_info_form.dart
+    │               vehicle_form.dart
+    │
+    └───vehicle
+        ├───data
+        │   └───repositories
+        │           vehicle_repository_impl.dart
+        │
+        ├───domain
+        │   ├───entities
+        │   │       vehicle_entity.dart
+        │   │
+        │   └───repositories
+        │           vehicle_repository.dart
+        │
+        └───presentation
+            └───providers
+                    vehicle_providers.dart

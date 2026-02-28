@@ -1,5 +1,6 @@
 // lib/features/messages/presentation/widgets/conversation_tile.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -44,7 +45,7 @@ class ConversationTile extends StatelessWidget {
                     radius: 24,
                     backgroundColor: theme.colorScheme.primaryContainer,
                     backgroundImage: participant.profilePhotoUrl != null
-                        ? NetworkImage(participant.profilePhotoUrl!)
+                        ? CachedNetworkImageProvider(participant.profilePhotoUrl!)
                         : null,
                     child: participant.profilePhotoUrl == null
                         ? Text(
@@ -237,7 +238,7 @@ class ConversationTileCompact extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
         backgroundImage: participant.profilePhotoUrl != null
-            ? NetworkImage(participant.profilePhotoUrl!)
+            ? CachedNetworkImageProvider(participant.profilePhotoUrl!)
             : null,
         child: participant.profilePhotoUrl == null
             ? Text(participant.initials)

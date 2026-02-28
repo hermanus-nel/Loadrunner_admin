@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/services/fcm_service.dart';
 import '../../../../core/services/session_service.dart';
 import '../../../../core/services/bulksms_service.dart';
 
@@ -99,6 +100,9 @@ class AuthService {
       }
 
       debugPrint('AuthService: Admin login successful');
+
+      // Register FCM token now that userId is available
+      await FcmService.instance.registerCurrentToken();
 
       // Return appropriate data from session result
       return {

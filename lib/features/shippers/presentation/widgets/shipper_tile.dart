@@ -1,5 +1,6 @@
 // lib/features/shippers/presentation/widgets/shipper_tile.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -120,7 +121,7 @@ class ShipperTile extends StatelessWidget {
               ? theme.colorScheme.errorContainer
               : theme.colorScheme.primaryContainer,
           backgroundImage: shipper.profilePhotoUrl != null
-              ? NetworkImage(shipper.profilePhotoUrl!)
+              ? CachedNetworkImageProvider(shipper.profilePhotoUrl!)
               : null,
           child: shipper.profilePhotoUrl == null
               ? Text(
@@ -277,7 +278,7 @@ class ShipperTileCompact extends StatelessWidget {
             ? theme.colorScheme.errorContainer
             : theme.colorScheme.primaryContainer,
         backgroundImage: shipper.profilePhotoUrl != null
-            ? NetworkImage(shipper.profilePhotoUrl!)
+            ? CachedNetworkImageProvider(shipper.profilePhotoUrl!)
             : null,
         child: shipper.profilePhotoUrl == null
             ? Text(

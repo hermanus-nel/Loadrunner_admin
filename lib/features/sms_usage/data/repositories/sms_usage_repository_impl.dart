@@ -26,7 +26,9 @@ class SmsUsageRepositoryImpl implements SmsUsageRepository {
         final pageSize = pagination?.pageSize ?? 50;
         final offset = (page - 1) * pageSize;
 
-        var query = _supabase.from('sms_billing').select('*');
+        var query = _supabase.from('sms_billing').select(
+            'id, phone_number, message_content, cost_cents, '
+            'created_at, sent_at');
 
         query = _applyFilters(query, filters);
 

@@ -1,5 +1,6 @@
 // lib/features/messages/presentation/screens/conversation_screen.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -127,7 +128,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           radius: 18,
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           backgroundImage: _recipient!.profilePhotoUrl != null
-              ? NetworkImage(_recipient!.profilePhotoUrl!)
+              ? CachedNetworkImageProvider(_recipient!.profilePhotoUrl!)
               : null,
           child: _recipient!.profilePhotoUrl == null
               ? Text(

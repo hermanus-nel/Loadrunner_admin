@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'logger_service.dart';
 import 'session_service.dart';
+import 'supabase_provider.dart';
 
 /// Data class for notification tap events used for deep-link navigation.
 class NotificationTapEvent {
@@ -41,6 +41,8 @@ class FcmService {
   String? _currentToken;
   bool _initialized = false;
   SessionService? _sessionService;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   bool get isInitialized => _initialized;
   String? get currentToken => _currentToken;
@@ -79,6 +81,9 @@ class FcmService {
         return;
       }
 
+      // Create the notification channel (required on Android 8+)
+      await _createNotificationChannel();
+
       // Get and register FCM token
       _currentToken = await _messaging!.getToken();
       if (_currentToken != null) {
@@ -114,7 +119,7 @@ class FcmService {
       final userId = _userId;
       if (userId == null) return;
 
-      await Supabase.instance.client.from('device_tokens').upsert(
+      await SupabaseProvider().client.from('device_tokens').upsert(
         {
           'user_id': userId,
           'fcm_token': token,
@@ -130,13 +135,48 @@ class FcmService {
     }
   }
 
+  /// Create the Android notification channel and initialize local notifications.
+  Future<void> _createNotificationChannel() async {
+    try {
+      // Initialize the local notifications plugin
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initSettings = InitializationSettings(android: androidSettings);
+      await _localNotifications.initialize(initSettings);
+
+      // Create the admin notification channel
+      const androidChannel = AndroidNotificationChannel(
+        'loadrunner_admin_notifications',
+        'Admin Notifications',
+        description: 'Notifications for LoadRunner Admin events',
+        importance: Importance.high,
+      );
+
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
+      logDebug('Notification channel created: loadrunner_admin_notifications');
+    } catch (e) {
+      logError('Failed to create notification channel', e);
+    }
+  }
+
+  /// Register the current FCM token for the logged-in user.
+  /// Call after login when userId becomes available.
+  Future<void> registerCurrentToken() async {
+    if (_currentToken != null) {
+      await _registerToken(_currentToken!);
+    }
+  }
+
   /// Remove the current device token on logout.
   Future<void> removeToken() async {
     try {
       final userId = _userId;
       if (userId == null || _currentToken == null) return;
 
-      await Supabase.instance.client
+      await SupabaseProvider().client
           .from('device_tokens')
           .delete()
           .eq('user_id', userId)
@@ -155,7 +195,7 @@ class FcmService {
       try {
         final userId = _userId;
         if (userId != null) {
-          await Supabase.instance.client
+          await SupabaseProvider().client
               .from('device_tokens')
               .delete()
               .eq('user_id', userId)
@@ -169,10 +209,47 @@ class FcmService {
     await _registerToken(newToken);
   }
 
-  /// Handle foreground message — emit to stream for in-app display.
+  /// Handle foreground message — show local notification and emit to stream.
   void _handleForegroundMessage(RemoteMessage message) {
     logDebug('Foreground message: ${message.notification?.title}');
+    _showLocalNotification(message);
     _notificationController.add(message);
+  }
+
+  /// Show a local notification so foreground messages are visible.
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'loadrunner_admin_notifications',
+        'Admin Notifications',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
+        channelShowBadge: true,
+      );
+
+      const details = NotificationDetails(android: androidDetails);
+
+      final title = message.notification?.title ??
+          message.data['title'] as String? ??
+          'LoadRunner Admin';
+      final body = message.notification?.body ??
+          message.data['body'] as String? ??
+          'New notification';
+
+      await _localNotifications.show(
+        message.hashCode,
+        title,
+        body,
+        details,
+      );
+      logDebug('Local notification shown: $title');
+    } catch (e) {
+      logError('Failed to show local notification', e);
+    }
   }
 
   /// Handle notification tap — extract type + related_id for navigation.

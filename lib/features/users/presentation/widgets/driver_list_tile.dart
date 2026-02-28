@@ -1,5 +1,6 @@
 // lib/features/users/presentation/widgets/driver_list_tile.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -72,7 +73,7 @@ class DriverListTile extends StatelessWidget {
                         ),
                         const SizedBox(width: AppDimensions.spacingSm),
                         StatusBadge(
-                          status: driver.verificationStatus.name,
+                          status: driver.verificationStatus.statusName,
                           size: StatusBadgeSize.small,
                         ),
                       ],
@@ -110,7 +111,7 @@ class DriverListTile extends StatelessWidget {
     if (driver.hasProfilePhoto) {
       return CircleAvatar(
         radius: 24,
-        backgroundImage: NetworkImage(driver.profilePhotoUrl!),
+        backgroundImage: CachedNetworkImageProvider(driver.profilePhotoUrl!),
         backgroundColor: isDark
             ? AppColors.surfaceDark
             : AppColors.surfaceLight,
@@ -294,7 +295,7 @@ class DriverListTileCompact extends StatelessWidget {
         radius: 20,
         backgroundColor: AppColors.primaryLight.withOpacity(0.2),
         backgroundImage: driver.hasProfilePhoto
-            ? NetworkImage(driver.profilePhotoUrl!)
+            ? CachedNetworkImageProvider(driver.profilePhotoUrl!)
             : null,
         child: driver.hasProfilePhoto
             ? null
@@ -316,7 +317,7 @@ class DriverListTileCompact extends StatelessWidget {
         ),
       ),
       trailing: StatusBadge(
-        status: driver.verificationStatus.name,
+        status: driver.verificationStatus.statusName,
         size: StatusBadgeSize.small,
       ),
     );

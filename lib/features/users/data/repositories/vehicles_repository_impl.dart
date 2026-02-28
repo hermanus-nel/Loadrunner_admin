@@ -52,6 +52,18 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
               verified_by,
               verified_at,
               created_at,
+              registration_doc_status,
+              registration_doc_verified_by,
+              registration_doc_verified_at,
+              registration_doc_rejection_reason,
+              insurance_doc_status,
+              insurance_doc_verified_by,
+              insurance_doc_verified_at,
+              insurance_doc_rejection_reason,
+              roadworthy_doc_status,
+              roadworthy_doc_verified_by,
+              roadworthy_doc_verified_at,
+              roadworthy_doc_rejection_reason,
               driver:users!vehicles_driver_id_fkey(
                 first_name,
                 last_name,
@@ -510,6 +522,179 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
   }
 
   // ==========================================================================
+  // VEHICLE DOCUMENT REVIEW METHODS
+  // ==========================================================================
+
+  /// Map docType label to column prefix
+  String _docTypeToColumnPrefix(String docType) {
+    switch (docType) {
+      case 'Registration':
+        return 'registration_doc';
+      case 'Insurance':
+        return 'insurance_doc';
+      case 'Roadworthy':
+        return 'roadworthy_doc';
+      default:
+        throw ArgumentError('Invalid docType: $docType');
+    }
+  }
+
+  @override
+  Future<bool> approveVehicleDocument({
+    required String vehicleId,
+    required String docType,
+    required String adminId,
+  }) async {
+    try {
+      final prefix = _docTypeToColumnPrefix(docType);
+      debugPrint('Approving $docType document for vehicle $vehicleId');
+
+      await _jwtRecoveryHandler.executeWithRecovery(
+        () => _supabaseProvider.client
+            .from('vehicles')
+            .update({
+          '${prefix}_status': 'approved',
+          '${prefix}_verified_by': adminId,
+          '${prefix}_verified_at': DateTime.now().toUtc().toIso8601String(),
+          '${prefix}_rejection_reason': null,
+        }).eq('id', vehicleId),
+        'approve vehicle document',
+      );
+
+      await _logAdminAction(
+        adminId: adminId,
+        action: 'approve_vehicle_document',
+        targetType: 'vehicle',
+        targetId: vehicleId,
+        details: {
+          'document_type': docType,
+          'new_status': 'approved',
+        },
+      );
+
+      // Send notification to driver
+      final vehicle = await fetchVehicleDetails(vehicleId);
+      await _sendVehicleDocumentNotification(
+        driverId: vehicle.driverId,
+        vehicleName: vehicle.displayName,
+        docType: docType,
+        action: 'approved',
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error approving vehicle document: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> rejectVehicleDocument({
+    required String vehicleId,
+    required String docType,
+    required String adminId,
+    required String reason,
+    String? notes,
+  }) async {
+    try {
+      final prefix = _docTypeToColumnPrefix(docType);
+      debugPrint('Rejecting $docType document for vehicle $vehicleId');
+
+      await _jwtRecoveryHandler.executeWithRecovery(
+        () => _supabaseProvider.client
+            .from('vehicles')
+            .update({
+          '${prefix}_status': 'rejected',
+          '${prefix}_verified_by': adminId,
+          '${prefix}_verified_at': DateTime.now().toUtc().toIso8601String(),
+          '${prefix}_rejection_reason': reason,
+        }).eq('id', vehicleId),
+        'reject vehicle document',
+      );
+
+      await _logAdminAction(
+        adminId: adminId,
+        action: 'reject_vehicle_document',
+        targetType: 'vehicle',
+        targetId: vehicleId,
+        details: {
+          'document_type': docType,
+          'new_status': 'rejected',
+          'reason': reason,
+          'notes': notes,
+        },
+      );
+
+      final vehicle = await fetchVehicleDetails(vehicleId);
+      await _sendVehicleDocumentNotification(
+        driverId: vehicle.driverId,
+        vehicleName: vehicle.displayName,
+        docType: docType,
+        action: 'rejected',
+        reason: reason,
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error rejecting vehicle document: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> requestVehicleDocumentReupload({
+    required String vehicleId,
+    required String docType,
+    required String adminId,
+    required String reason,
+    String? notes,
+  }) async {
+    try {
+      final prefix = _docTypeToColumnPrefix(docType);
+      debugPrint('Requesting re-upload of $docType for vehicle $vehicleId');
+
+      await _jwtRecoveryHandler.executeWithRecovery(
+        () => _supabaseProvider.client
+            .from('vehicles')
+            .update({
+          '${prefix}_status': 'documents_requested',
+          '${prefix}_verified_by': adminId,
+          '${prefix}_verified_at': DateTime.now().toUtc().toIso8601String(),
+          '${prefix}_rejection_reason': reason,
+        }).eq('id', vehicleId),
+        'request vehicle document reupload',
+      );
+
+      await _logAdminAction(
+        adminId: adminId,
+        action: 'request_vehicle_document_reupload',
+        targetType: 'vehicle',
+        targetId: vehicleId,
+        details: {
+          'document_type': docType,
+          'new_status': 'documents_requested',
+          'reason': reason,
+          'notes': notes,
+        },
+      );
+
+      final vehicle = await fetchVehicleDetails(vehicleId);
+      await _sendVehicleDocumentNotification(
+        driverId: vehicle.driverId,
+        vehicleName: vehicle.displayName,
+        docType: docType,
+        action: 'reupload_requested',
+        reason: reason,
+      );
+
+      return true;
+    } catch (e) {
+      debugPrint('Error requesting vehicle document reupload: $e');
+      rethrow;
+    }
+  }
+
+  // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
 
@@ -545,7 +730,7 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
               id,
               admin_id,
               action,
-              details,
+              new_values,
               created_at,
               admin:users!admin_audit_logs_admin_id_fkey(
                 first_name,
@@ -561,7 +746,7 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
 
       final List<dynamic> data = response as List<dynamic>;
       return data.map((json) {
-        final details = json['details'] as Map<String, dynamic>? ?? {};
+        final details = json['new_values'] as Map<String, dynamic>? ?? {};
         final admin = json['admin'] as Map<String, dynamic>?;
         final adminFirstName = admin?['first_name'] as String?;
         final adminLastName = admin?['last_name'] as String?;
@@ -576,6 +761,8 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
           adminName: adminName,
           previousStatus: details['previous_status'] as String? ?? 'unknown',
           newStatus: details['new_status'] as String? ?? 'unknown',
+          action: json['action'] as String?,
+          documentType: details['document_type'] as String?,
           reason: details['reason'] as String?,
           notes: details['notes'] as String?,
           createdAt: DateTime.parse(json['created_at'] as String),
@@ -608,7 +795,7 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
           'action': action,
           'target_type': targetType,
           'target_id': targetId,
-          'details': details ?? {},
+          'new_values': details ?? {},
         }),
 'log admin action',
       );
@@ -627,8 +814,6 @@ class VehiclesRepositoryImpl implements VehiclesRepository {
   }) async {
     try {
       final message = '''
-🚗 Vehicle Approved!
-
 Great news! Your vehicle "$vehicleName" has been verified and approved.
 
 You can now use this vehicle for deliveries. Drive safely!
@@ -762,8 +947,6 @@ We will notify you once the review is complete. Thank you for your patience.
   }) async {
     try {
       final message = '''
-⚠️ Vehicle Suspended
-
 Your vehicle "$vehicleName" has been suspended.
 
 Reason: $reason
@@ -788,6 +971,54 @@ You will no longer be able to use this vehicle for deliveries until it is reinst
     }
   }
 
+  /// Send vehicle document review notification to driver
+  Future<void> _sendVehicleDocumentNotification({
+    required String driverId,
+    required String vehicleName,
+    required String docType,
+    required String action,
+    String? reason,
+  }) async {
+    try {
+      String message;
+      String notificationType;
+      switch (action) {
+        case 'approved':
+          message =
+              'Your $docType document for vehicle "$vehicleName" has been approved.';
+          notificationType = 'vehicle_document_approved';
+          break;
+        case 'rejected':
+          message =
+              'Your $docType document for vehicle "$vehicleName" has been rejected.\n\nReason: ${reason ?? "Not specified"}';
+          notificationType = 'vehicle_document_rejected';
+          break;
+        case 'reupload_requested':
+          message =
+              'Please re-upload the $docType document for vehicle "$vehicleName".\n\nReason: ${reason ?? "Not specified"}';
+          notificationType = 'vehicle_document_reupload_requested';
+          break;
+        default:
+          return;
+      }
+
+      await _jwtRecoveryHandler.executeWithRecovery(
+        () => _supabaseProvider.client.from('notifications').insert({
+          'user_id': driverId,
+          'message': message,
+          'type': notificationType,
+          'delivery_method': 'push',
+          'related_id': driverId,
+        }),
+        'send vehicle document notification',
+      );
+
+      debugPrint('Vehicle document notification sent');
+    } catch (e) {
+      debugPrint('Error sending vehicle document notification: $e');
+    }
+  }
+
   /// Send vehicle reinstatement notification to driver
   Future<void> _sendVehicleReinstateNotification({
     required String driverId,
@@ -795,8 +1026,6 @@ You will no longer be able to use this vehicle for deliveries until it is reinst
   }) async {
     try {
       final message = '''
-🚗 Vehicle Reinstated!
-
 Great news! Your vehicle "$vehicleName" has been reinstated and approved.
 
 You can now use this vehicle for deliveries again. Drive safely!

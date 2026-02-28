@@ -3,8 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_dimensions.dart';
+import '../../../shippers/presentation/screens/shippers_list_screen.dart';
 import 'drivers_list_screen.dart';
 
 /// Users screen - Wrapper with tabs for Drivers and Shippers
@@ -61,7 +60,7 @@ class _UsersScreenState extends State<UsersScreen>
         children: const [
           // Drivers tab - Uses DriversListScreen content
           _DriversTabContent(),
-          // Shippers tab - Placeholder for Step 33
+          // Shippers tab - Uses ShippersListScreenContent
           _ShippersTabContent(),
         ],
       ),
@@ -81,50 +80,12 @@ class _DriversTabContent extends StatelessWidget {
   }
 }
 
-/// Shippers tab content - Placeholder
+/// Shippers tab content - Embeds ShippersListScreenContent functionality
 class _ShippersTabContent extends StatelessWidget {
   const _ShippersTabContent();
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Center(
-      child: Padding(
-        padding: AppDimensions.pagePadding,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.business_outlined,
-              size: 64,
-              color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
-            ),
-            const SizedBox(height: AppDimensions.spacingMd),
-            Text(
-              'Shipper Management',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimensions.spacingXs),
-            Text(
-              'Coming in Step 33',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDark
-                        ? AppColors.textTertiaryDark
-                        : AppColors.textTertiaryLight,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return const ShippersListScreenContent();
   }
 }

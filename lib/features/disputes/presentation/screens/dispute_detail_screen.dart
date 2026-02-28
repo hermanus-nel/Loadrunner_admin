@@ -1,11 +1,14 @@
 // lib/features/disputes/presentation/screens/dispute_detail_screen.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/components/loading_state.dart';
 import '../../domain/entities/dispute_entity.dart';
 import '../../domain/entities/evidence_entity.dart';
 import '../providers/disputes_providers.dart';
@@ -52,10 +55,22 @@ class _DisputeDetailScreenState extends ConsumerState<DisputeDetailScreen>
     final theme = Theme.of(context);
     final state = ref.watch(disputeDetailNotifierProvider);
 
-    if (state.isLoading && state.dispute == null) {
+    if (state.dispute == null && state.error == null) {
       return Scaffold(
         appBar: AppBar(centerTitle: true, title: const Text('Dispute Details')),
-        body: const Center(child: CircularProgressIndicator()),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          physics: const NeverScrollableScrollPhysics(),
+          children: const [
+            ShimmerCard(height: 80),
+            SizedBox(height: 16),
+            ShimmerCard(height: 120),
+            SizedBox(height: 16),
+            ShimmerCard(height: 100),
+            SizedBox(height: 16),
+            ShimmerCard(height: 160),
+          ],
+        ),
       );
     }
 
@@ -175,10 +190,13 @@ class _DisputeDetailScreenState extends ConsumerState<DisputeDetailScreen>
             if (dispute.shipment != null)
               ListTile(
                 leading: const Icon(Icons.local_shipping),
-                title: const Text('View Shipment'),
+                title: const Text('Copy Shipment ID'),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/shipments/${dispute.freightPostId}');
+                  Clipboard.setData(ClipboardData(text: dispute.freightPostId));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Shipment ID copied')),
+                  );
                 },
               ),
             if (dispute.raisedBy != null)
@@ -188,7 +206,7 @@ class _DisputeDetailScreenState extends ConsumerState<DisputeDetailScreen>
                 subtitle: const Text('Raised by'),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/users/${dispute.raisedById}');
+                  _navigateToUser(context, dispute.raisedById, dispute.raisedBy?.role);
                 },
               ),
             if (dispute.raisedAgainst != null)
@@ -198,7 +216,7 @@ class _DisputeDetailScreenState extends ConsumerState<DisputeDetailScreen>
                 subtitle: const Text('Raised against'),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push('/users/${dispute.raisedAgainstId}');
+                  _navigateToUser(context, dispute.raisedAgainstId, dispute.raisedAgainst?.role);
                 },
               ),
             if (dispute.isActive)
@@ -266,12 +284,12 @@ class _DetailsTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       DisputeStatusBadge(status: dispute.status),
-                      const SizedBox(width: 8),
                       DisputePriorityBadge(priority: dispute.priority),
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -485,6 +503,15 @@ class _DetailsTab extends StatelessWidget {
   }
 }
 
+String _userRoutePath(String userId, String? role) {
+  if (role == 'Shipper') return '/users/shipper/$userId';
+  return '/users/driver/$userId';
+}
+
+void _navigateToUser(BuildContext context, String userId, String? role) {
+  context.push(_userRoutePath(userId, role));
+}
+
 class _PartyCard extends StatelessWidget {
   final String title;
   final DisputeUserInfo? user;
@@ -501,43 +528,85 @@ class _PartyCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primaryContainer,
-          backgroundImage: user?.profilePhotoUrl != null
-              ? NetworkImage(user!.profilePhotoUrl!)
-              : null,
-          child: user?.profilePhotoUrl == null
-              ? Text(user?.initials ?? '?')
-              : null,
-        ),
-        title: Text(user?.displayName ?? 'Unknown User'),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title),
-            if (user?.role != null)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: user!.role == 'Driver' ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  user!.role!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: user!.role == 'Driver' ? Colors.blue : Colors.green,
+      child: Column(
+        children: [
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: theme.colorScheme.primaryContainer,
+              backgroundImage: user?.profilePhotoUrl != null
+                  ? CachedNetworkImageProvider(user!.profilePhotoUrl!)
+                  : null,
+              child: user?.profilePhotoUrl == null
+                  ? Text(user?.initials ?? '?')
+                  : null,
+            ),
+            title: Text(user?.displayName ?? 'Unknown User'),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title),
+                if (user?.role != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: user!.role == 'Driver' ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      user!.role!,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: user!.role == 'Driver' ? Colors.blue : Colors.green,
+                      ),
+                    ),
                   ),
-                ),
+              ],
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.chevron_right),
+              onPressed: () => _navigateToUser(context, userId, user?.role),
+            ),
+            isThreeLine: user?.role != null,
+          ),
+          if (user?.phone != null || user?.email != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+              child: Row(
+                children: [
+                  if (user?.phone != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => launchUrl(Uri.parse('sms:${user!.phone}')),
+                        icon: const Icon(Icons.message, size: 16),
+                        label: const Text('Message'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          side: BorderSide(color: Colors.grey[400]!),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ),
+                  if (user?.phone != null && user?.email != null)
+                    const SizedBox(width: 8),
+                  if (user?.email != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => launchUrl(Uri.parse('mailto:${user!.email}')),
+                        icon: const Icon(Icons.email, size: 16),
+                        label: const Text('Email'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey[700],
+                          side: BorderSide(color: Colors.grey[400]!),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: () => context.push('/users/$userId'),
-        ),
-        isThreeLine: user?.role != null,
+            ),
+        ],
       ),
     );
   }
@@ -557,88 +626,70 @@ class _ShipmentCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Card(
-      child: InkWell(
-        onTap: () => context.push('/shipments/$shipmentId'),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.local_shipping, color: theme.colorScheme.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Shipment #${shipmentId.substring(0, 8)}',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const Spacer(),
-                  if (shipment.status != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        shipment.status!,
-                        style: theme.textTheme.labelSmall,
-                      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.local_shipping, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Shipment #${shipmentId.substring(0, 8)}',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const Spacer(),
+                if (shipment.status != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                ],
-              ),
-              if (shipment.pickupLocation != null || shipment.deliveryLocation != null) ...[
-                const SizedBox(height: 12),
-                if (shipment.pickupLocation != null)
-                  Row(
-                    children: [
-                      Icon(Icons.circle, size: 8, color: Colors.green),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment.pickupLocation!,
-                          style: theme.textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                    child: Text(
+                      shipment.status!,
+                      style: theme.textTheme.labelSmall,
+                    ),
                   ),
-                if (shipment.deliveryLocation != null) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.circle, size: 8, color: Colors.red),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          shipment.deliveryLocation!,
-                          style: theme.textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ],
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Spacer(),
-                  Text(
-                    'View shipment',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary,
+            ),
+            if (shipment.pickupLocation != null || shipment.deliveryLocation != null) ...[
+              const SizedBox(height: 12),
+              if (shipment.pickupLocation != null)
+                Row(
+                  children: [
+                    Icon(Icons.circle, size: 8, color: Colors.green),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        shipment.pickupLocation!,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.chevron_right, size: 16, color: theme.colorScheme.primary),
-                ],
-              ),
+                  ],
+                ),
+              if (shipment.deliveryLocation != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.circle, size: 8, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        shipment.deliveryLocation!,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -930,8 +981,14 @@ class _ActionBar extends ConsumerWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _showStatusDialog(context, ref),
-                icon: const Icon(Icons.update),
+                icon: const Icon(Icons.update, size: 18),
                 label: const Text('Status'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -939,20 +996,34 @@ class _ActionBar extends ConsumerWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () => _showEscalateDialog(context, ref),
-                icon: const Icon(Icons.priority_high),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                ),
+                icon: const Icon(Icons.priority_high, size: 18),
                 label: const Text('Escalate'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 8),
             // Resolve button
             Expanded(
-              child: FilledButton.icon(
+              child: OutlinedButton.icon(
                 onPressed: () => _showResolveDialog(context, ref),
-                icon: const Icon(Icons.check),
+                icon: const Icon(Icons.check, size: 18),
                 label: const Text('Resolve'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  backgroundColor: theme.colorScheme.primary,
+                  side: BorderSide(color: theme.colorScheme.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
           ],
@@ -970,17 +1041,43 @@ class _ActionBar extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: DisputeStatus.values
               .where((s) => s != DisputeStatus.resolved && s != DisputeStatus.closed)
-              .map((status) => ListTile(
-                    leading: DisputeStatusBadge(status: status),
-                    title: Text(status.displayName),
-                    selected: dispute.status == status,
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await ref.read(disputeDetailNotifierProvider.notifier)
-                          .updateStatus(disputeId: disputeId, status: status);
-                    },
-                  ))
-              .toList(),
+              .map((status) {
+            final isSelected = dispute.status == status;
+            return InkWell(
+              onTap: () async {
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                navigator.pop();
+                final result = await ref.read(disputeDetailNotifierProvider.notifier)
+                    .updateStatus(disputeId: disputeId, status: status);
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      result.success
+                          ? 'Status updated to ${status.displayName}'
+                          : result.error ?? 'Failed to update status',
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Flexible(child: DisputeStatusBadge(status: status)),
+                    if (isSelected)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 8),
+                        child: Icon(Icons.check, color: Colors.green, size: 20),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
         actions: [
           TextButton(

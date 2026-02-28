@@ -10,7 +10,7 @@ import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/users/presentation/screens/users_screen.dart';
 import '../../features/users/presentation/screens/driver_profile_screen.dart';
 import '../../features/users/presentation/screens/vehicle_detail_screen.dart';
-import '../../features/users/presentation/screens/shipper_profile_screen.dart';
+import '../../features/users/presentation/screens/vehicle_doc_review_screen.dart';
 import '../../features/payments/presentation/screens/payments_screen.dart';
 import '../../features/payments/presentation/screens/transaction_detail_screen.dart';
 import '../../features/messages/presentation/screens/messages_screen.dart';
@@ -85,6 +85,7 @@ class AppRoutes {
   // Document review routes
   static const String documentQueue = '/document-queue';
   static const String documentReview = '/document-review/:id';
+  static const String vehicleDocReview = '/users/vehicle/:id/document-review';
 
   // Helper methods for building paths
   static String driverDetailPath(String id) => '/users/driver/$id';
@@ -97,6 +98,8 @@ class AppRoutes {
   static String notificationsPath() => '/notifications';
   static String notificationPreferencesPath() => '/notifications/preferences';
   static String documentReviewPath(String id) => '/document-review/$id';
+  static String vehicleDocReviewPath(String id) =>
+      '/users/vehicle/$id/document-review';
 }
 
 /// Navigation key for accessing navigator state
@@ -181,13 +184,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Vehicle document review screen
+      GoRoute(
+        path: '/users/vehicle/:id/document-review',
+        name: 'vehicleDocReview',
+        builder: (context, state) {
+          final vehicleId = state.pathParameters['id']!;
+          final extra = state.extra! as Map<String, dynamic>;
+          return VehicleDocReviewScreen(
+            vehicleId: vehicleId,
+            docType: extra['docType'] as String,
+            docUrl: extra['docUrl'] as String,
+            currentStatus: extra['currentStatus'] as String?,
+          );
+        },
+      ),
+
       // Shipper profile/detail screen (from Users tab)
       GoRoute(
         path: '/users/shipper/:id',
         name: 'userShipperDetail',
         builder: (context, state) {
           final shipperId = state.pathParameters['id']!;
-          return ShipperProfileScreen(shipperId: shipperId);
+          return ShipperDetailScreen(shipperId: shipperId);
         },
       ),
 

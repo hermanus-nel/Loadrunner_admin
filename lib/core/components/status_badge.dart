@@ -110,10 +110,10 @@ class StatusBadge extends StatelessWidget {
         );
       case 'documents_requested':
         return _StatusConfig(
-          backgroundColor: AppColors.statusDocumentsRequested,
-          textColor: AppColors.statusDocumentsRequestedText,
+          backgroundColor: AppColors.statusPending,
+          textColor: AppColors.statusPendingText,
           icon: Icons.upload_file,
-          label: 'Docs Requested',
+          label: 'Re-upload Requested',
         );
       case 'suspended':
         return _StatusConfig(

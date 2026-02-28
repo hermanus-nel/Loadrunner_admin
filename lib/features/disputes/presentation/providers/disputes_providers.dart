@@ -364,14 +364,10 @@ class DisputeDetailNotifier extends StateNotifier<DisputeDetailState> {
         notes: notes,
       );
 
-      if (result.success && result.dispute != null) {
-        state = state.copyWith(
-          dispute: result.dispute,
-          isUpdating: false,
-        );
-        // Refresh timeline
-        final timeline = await _repository.fetchTimeline(disputeId: disputeId);
-        state = state.copyWith(timeline: timeline);
+      if (result.success) {
+        // Re-fetch full detail to preserve joined data
+        await fetchDisputeDetail(disputeId);
+        state = state.copyWith(isUpdating: false);
       } else {
         state = state.copyWith(
           isUpdating: false,
@@ -435,6 +431,7 @@ class DisputeDetailNotifier extends StateNotifier<DisputeDetailState> {
       if (result.success) {
         // Refresh dispute detail
         await fetchDisputeDetail(disputeId);
+        state = state.copyWith(isUpdating: false);
       } else {
         state = state.copyWith(
           isUpdating: false,
@@ -581,6 +578,15 @@ final defaultDisputeStatsProvider = FutureProvider<DisputeStats>((ref) async {
     startDate: now.subtract(const Duration(days: 30)),
     endDate: now,
   );
+});
+
+// ============================================================================
+// ACTIVE DISPUTES COUNT PROVIDER (for badge)
+// ============================================================================
+
+final activeDisputesCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  final repository = ref.read(disputesRepositoryProvider);
+  return repository.fetchActiveDisputesCount();
 });
 
 // ============================================================================

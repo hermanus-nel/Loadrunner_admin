@@ -4,7 +4,7 @@ import '../../domain/entities/approval_history_item.dart';
 class ApprovalHistoryModel {
   final String id;
   final String driverId;
-  final String adminId;
+  final String? adminId;
   final String? adminName;
   final String? previousStatus;
   final String newStatus;
@@ -16,7 +16,7 @@ class ApprovalHistoryModel {
   ApprovalHistoryModel({
     required this.id,
     required this.driverId,
-    required this.adminId,
+    this.adminId,
     this.adminName,
     this.previousStatus,
     required this.newStatus,
@@ -53,7 +53,7 @@ class ApprovalHistoryModel {
     return ApprovalHistoryModel(
       id: json['id'] as String,
       driverId: json['driver_id'] as String,
-      adminId: json['admin_id'] as String,
+      adminId: json['admin_id'] as String?,
       adminName: adminName,
       previousStatus: json['previous_status'] as String?,
       newStatus: json['new_status'] as String,

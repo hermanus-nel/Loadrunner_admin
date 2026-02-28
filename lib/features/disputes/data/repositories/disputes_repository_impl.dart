@@ -40,7 +40,7 @@ class DisputesRepositoryImpl implements DisputesRepository {
         raised_by_user:raised_by(id, first_name, last_name, phone_number, email, role, profile_photo_url),
         raised_against_user:raised_against(id, first_name, last_name, phone_number, email, role, profile_photo_url),
         admin_assigned_user:admin_assigned(id, first_name, last_name, phone_number, email, role, profile_photo_url),
-        freight_post:freight_post_id(id, pickup_location, delivery_location, status, created_at),
+        freight_post:freight_post_id(id, pickup_location_name, dropoff_location_name, status, created_at),
         evidence:dispute_evidence(count)
       ''');
 
@@ -131,7 +131,7 @@ class DisputesRepositoryImpl implements DisputesRepository {
           raised_against_user:raised_against(id, first_name, last_name, phone_number, email, role, profile_photo_url),
           admin_assigned_user:admin_assigned(id, first_name, last_name, phone_number, email, role, profile_photo_url),
           resolved_by_user:resolved_by(id, first_name, last_name, phone_number, email, role, profile_photo_url),
-          freight_post:freight_post_id(id, pickup_location, delivery_location, status, created_at)
+          freight_post:freight_post_id(id, pickup_location_name, dropoff_location_name, status, created_at)
         ''').eq('id', disputeId).single(),
         'fetch dispute detail $disputeId',
       );
@@ -691,7 +691,7 @@ class DisputesRepositoryImpl implements DisputesRepository {
               *,
               raised_by_user:raised_by(id, first_name, last_name, phone_number, email, role, profile_photo_url),
               raised_against_user:raised_against(id, first_name, last_name, phone_number, email, role, profile_photo_url),
-              freight_post:freight_post_id(id, pickup_location, delivery_location, status, created_at)
+              freight_post:freight_post_id(id, pickup_location_name, dropoff_location_name, status, created_at)
             ''')
             .or('raised_by.eq.$userId,raised_against.eq.$userId')
             .order('created_at', ascending: false),
@@ -729,6 +729,25 @@ class DisputesRepositoryImpl implements DisputesRepository {
     } catch (e) {
       debugPrint('Error getting disputes by shipment: $e');
       return [];
+    }
+  }
+
+  @override
+  Future<int> fetchActiveDisputesCount() async {
+    try {
+      final response = await _jwtHandler.executeWithRecovery(
+        () => _supabaseProvider.client
+            .from('disputes')
+            .select('id')
+            .inFilter('status', ['open', 'under_review', 'awaiting_response', 'escalated']),
+        'fetch active disputes count',
+      );
+
+      final List<dynamic> data = response as List<dynamic>;
+      return data.length;
+    } catch (e) {
+      debugPrint('Error fetching active disputes count: $e');
+      rethrow;
     }
   }
 

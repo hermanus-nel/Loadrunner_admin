@@ -102,18 +102,23 @@ class _VehicleCardState extends State<VehicleCard> {
                         // Type and capacity
                         Row(
                           children: [
-                            _buildInfoChip(
-                              context,
-                              Icons.local_shipping_outlined,
-                              vehicle.type,
-                            ),
-                            const SizedBox(width: 8),
-                            if (vehicle.capacityTons != null)
-                              _buildInfoChip(
+                            Flexible(
+                              child: _buildInfoChip(
                                 context,
-                                Icons.scale_outlined,
-                                '${vehicle.capacityTons!.toStringAsFixed(1)} tons',
+                                Icons.local_shipping_outlined,
+                                vehicle.type,
                               ),
+                            ),
+                            if (vehicle.capacityTons != null) ...[
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: _buildInfoChip(
+                                  context,
+                                  Icons.scale_outlined,
+                                  '${vehicle.capacityTons!.toStringAsFixed(1)} tons',
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -256,11 +261,15 @@ class _VehicleCardState extends State<VehicleCard> {
             color: colorScheme.primary,
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: colorScheme.primary,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -318,32 +327,11 @@ class _VehicleCardState extends State<VehicleCard> {
               'Ins',
               vehicle.insuranceDocumentUrl != null,
             ),
-            if (vehicle.roadworthyCertificateUrl != null) ...[
-              const SizedBox(width: 8),
-              _buildDocumentIndicator(context, 'RW', true),
-            ],
-          ],
-        ),
-
-        // Driver info
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(
-              Icons.person_outline,
-              size: 16,
-              color: colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                vehicle.driverName ?? 'Driver ${vehicle.driverId}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            const SizedBox(width: 8),
+            _buildDocumentIndicator(
+              context,
+              'RWC',
+              vehicle.roadworthyCertificateUrl != null,
             ),
           ],
         ),

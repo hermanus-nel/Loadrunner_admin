@@ -29,6 +29,7 @@ class _ResolutionDialogState extends State<ResolutionDialog> {
   final _formKey = GlobalKey<FormState>();
   final _notesController = TextEditingController();
   final _refundController = TextEditingController();
+  final _scrollController = ScrollController();
   ResolutionType _selectedResolution = ResolutionType.noAction;
   bool _includeRefund = false;
   bool _isLoading = false;
@@ -37,6 +38,7 @@ class _ResolutionDialogState extends State<ResolutionDialog> {
   void dispose() {
     _notesController.dispose();
     _refundController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -95,6 +97,7 @@ class _ResolutionDialogState extends State<ResolutionDialog> {
             // Content
             Flexible(
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 child: Form(
                   key: _formKey,
@@ -275,6 +278,11 @@ class _ResolutionDialogState extends State<ResolutionDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _isLoading ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -283,6 +291,11 @@ class _ResolutionDialogState extends State<ResolutionDialog> {
                     flex: 2,
                     child: FilledButton.icon(
                       onPressed: _isLoading ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                       icon: _isLoading
                           ? const SizedBox(
                               width: 20,
@@ -320,34 +333,54 @@ class _ResolutionDialogState extends State<ResolutionDialog> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      // Scroll to bottom to reveal validation errors on notes field
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    final refundAmount = _includeRefund
-        ? double.tryParse(_refundController.text)
-        : null;
+    try {
+      final refundAmount = _includeRefund
+          ? double.tryParse(_refundController.text)
+          : null;
 
-    final success = await widget.onResolve(
-      _selectedResolution,
-      _notesController.text,
-      refundAmount,
-    );
+      final success = await widget.onResolve(
+        _selectedResolution,
+        _notesController.text,
+        refundAmount,
+      );
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      if (success) {
-        Navigator.pop(context);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        if (success) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dispute resolved successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to resolve dispute'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Dispute resolved successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to resolve dispute'),
+          SnackBar(
+            content: Text('Error: $e'),
             backgroundColor: Colors.red,
           ),
         );

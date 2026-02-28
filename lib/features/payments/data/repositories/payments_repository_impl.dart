@@ -268,7 +268,7 @@ class PaymentsRepositoryImpl implements PaymentsRepository {
             'action': 'process_refund',
             'target_type': 'payment',
             'target_id': paymentId,
-            'details': {
+            'new_values': {
               'refund_id': refundId,
               'refund_amount': netRefundAmount,
               'cancellation_fee': cancellationFee,
@@ -340,7 +340,7 @@ class PaymentsRepositoryImpl implements PaymentsRepository {
             'action': 'retry_payment',
             'target_type': 'payment',
             'target_id': paymentId,
-            'details': {
+            'new_values': {
               'new_transaction_id': newTransactionId,
               'original_transaction_id': payment.transactionId,
             },

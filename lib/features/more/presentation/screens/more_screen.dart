@@ -6,7 +6,9 @@ import '../../../../core/navigation/app_router.dart';
 import '../../../../core/services/fcm_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_dimensions.dart';
+import '../../../disputes/presentation/providers/disputes_providers.dart';
 import '../../../users/presentation/providers/document_queue_providers.dart';
+import '../../../users/presentation/providers/driver_profile_providers.dart';
 
 /// More screen - Settings, analytics, and additional features
 /// TODO: Implement sub-screens in later steps
@@ -18,6 +20,14 @@ class MoreScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final queueCount = ref.watch(documentQueueCountProvider);
     final queueBadge = queueCount.whenOrNull(
+      data: (count) => count > 0 ? count.toString() : null,
+    );
+    final disputeCount = ref.watch(activeDisputesCountProvider);
+    final disputeBadge = disputeCount.whenOrNull(
+      data: (count) => count > 0 ? count.toString() : null,
+    );
+    final bankCount = ref.watch(pendingBankVerificationsCountProvider);
+    final bankBadge = bankCount.whenOrNull(
       data: (count) => count > 0 ? count.toString() : null,
     );
     
@@ -95,10 +105,10 @@ class MoreScreen extends ConsumerWidget {
                 icon: Icons.gavel,
                 title: 'Disputes',
                 subtitle: 'Resolve user disputes',
-                badge: '3',
+                badge: disputeBadge,
                 badgeColor: AppColors.warning,
                 onTap: () {
-                  // TODO: Navigate to disputes
+                  context.push(AppRoutes.disputes);
                 },
               ),
               _buildDivider(),
@@ -107,7 +117,7 @@ class MoreScreen extends ConsumerWidget {
                 icon: Icons.account_balance,
                 title: 'Bank Verifications',
                 subtitle: 'Verify bank accounts',
-                badge: '5',
+                badge: bankBadge,
                 badgeColor: AppColors.info,
                 onTap: () {
                   // TODO: Navigate to bank verifications
@@ -130,7 +140,7 @@ class MoreScreen extends ConsumerWidget {
                 title: 'Audit Logs',
                 subtitle: 'View admin actions history',
                 onTap: () {
-                  // TODO: Navigate to audit logs
+                  context.push(AppRoutes.auditLogs);
                 },
               ),
             ],

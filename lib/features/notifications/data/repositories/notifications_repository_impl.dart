@@ -10,19 +10,6 @@ import '../../../../core/services/jwt_recovery_handler.dart';
 import '../../../../core/services/session_service.dart';
 import '../../../../core/services/supabase_provider.dart';
 
-/// Admin notification types stored in the DB.
-const _adminNotificationTypes = [
-  'dispute_filed',
-  'dispute_escalated',
-  'dispute_resolved',
-  'driver_pending_approval',
-  'driver_document_uploaded',
-  'driver_suspended',
-  'payment_failed',
-  'payment_refund_requested',
-  'admin_system_alert',
-];
-
 class NotificationsRepositoryImpl implements NotificationsRepository {
   final JwtRecoveryHandler _jwtHandler;
   final SupabaseProvider _supabaseProvider;
@@ -37,6 +24,13 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
         _sessionService = sessionService;
 
   SupabaseClient get _supabase => _supabaseProvider.client;
+
+  // Use adminClient (service role) for admin_event_* tables.
+  // RLS on these tables checks admin_id = auth.uid() (auth.users.id),
+  // but admin_id stores public.users.id — these differ, so RLS
+  // blocks all rows. The service role bypasses RLS; the app's
+  // .eq('admin_id', userId) filter still scopes to the correct admin.
+  SupabaseClient get _adminSupabase => _supabaseProvider.adminClient;
 
   String? get _userId => _sessionService.userId;
 
@@ -53,15 +47,14 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
 
       final offset = (page - 1) * pageSize;
 
-      var query = _supabase
-          .from('notifications')
+      var query = _adminSupabase
+          .from('admin_event_notifications')
           .select()
-          .eq('user_id', userId)
-          .eq('archived', false)
-          .inFilter('type', _adminNotificationTypes);
+          .eq('admin_id', userId)
+          .eq('archived', false);
 
       if (typeFilter != null) {
-        query = query.eq('type', typeFilter.toJson());
+        query = query.eq('event_type', typeFilter.toJson());
       }
       if (unreadOnly == true) {
         query = query.eq('is_read', false);
@@ -88,8 +81,8 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   Future<void> markAsRead(String notificationId) async {
     try {
       await _jwtHandler.executeWithRecovery(
-        () => _supabase
-            .from('notifications')
+        () => _adminSupabase
+            .from('admin_event_notifications')
             .update({'is_read': true})
             .eq('id', notificationId),
         'mark notification read',
@@ -107,12 +100,11 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
       if (userId == null) return;
 
       await _jwtHandler.executeWithRecovery(
-        () => _supabase
-            .from('notifications')
+        () => _adminSupabase
+            .from('admin_event_notifications')
             .update({'is_read': true})
-            .eq('user_id', userId)
-            .eq('is_read', false)
-            .inFilter('type', _adminNotificationTypes),
+            .eq('admin_id', userId)
+            .eq('is_read', false),
         'mark all notifications read',
       );
     } catch (e) {
@@ -125,7 +117,7 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   Future<void> archiveNotification(String notificationId) async {
     try {
       await _jwtHandler.executeWithRecovery(
-        () => _supabase.from('notifications').update({
+        () => _adminSupabase.from('admin_event_notifications').update({
           'archived': true,
           'archived_at': DateTime.now().toIso8601String(),
         }).eq('id', notificationId),
@@ -144,13 +136,12 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
       if (userId == null) return 0;
 
       final result = await _jwtHandler.executeWithRecovery(
-        () => _supabase
-            .from('notifications')
+        () => _adminSupabase
+            .from('admin_event_notifications')
             .select('id')
-            .eq('user_id', userId)
+            .eq('admin_id', userId)
             .eq('is_read', false)
-            .eq('archived', false)
-            .inFilter('type', _adminNotificationTypes),
+            .eq('archived', false),
         'get unread count',
       );
 
@@ -168,31 +159,44 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
 
     final controller = StreamController<int>();
 
-    // Emit initial count
-    getUnreadCount().then(controller.add).catchError((_) => controller.add(0));
+    void refreshCount() {
+      getUnreadCount()
+          .then((c) {
+            if (!controller.isClosed) controller.add(c);
+          })
+          .catchError((_) {
+            if (!controller.isClosed) controller.add(0);
+          });
+    }
 
-    // Subscribe to realtime changes on notifications table
+    // Emit initial count
+    refreshCount();
+
+    // Poll every 30 seconds as a reliable fallback.
+    // Realtime may not fire if RLS blocks the channel subscription.
+    final timer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => refreshCount(),
+    );
+
+    // Subscribe to realtime changes for instant updates when available.
     final channel = _supabase
-        .channel('admin_notifications_$userId')
+        .channel('admin_event_notifications_$userId')
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
-          table: 'notifications',
+          table: 'admin_event_notifications',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'user_id',
+            column: 'admin_id',
             value: userId,
           ),
-          callback: (payload) {
-            // Re-fetch count on any change
-            getUnreadCount()
-                .then(controller.add)
-                .catchError((_) {});
-          },
+          callback: (payload) => refreshCount(),
         )
         .subscribe();
 
     controller.onCancel = () {
+      timer.cancel();
       _supabase.removeChannel(channel);
     };
 
@@ -206,11 +210,10 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
       if (userId == null) return [];
 
       final result = await _jwtHandler.executeWithRecovery(
-        () => _supabase
-            .from('notification_type_preferences')
+        () => _adminSupabase
+            .from('admin_event_preferences')
             .select()
-            .eq('user_id', userId)
-            .inFilter('notification_type', _adminNotificationTypes),
+            .eq('admin_id', userId),
         'fetch notification preferences',
       );
 
@@ -234,13 +237,21 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
       final userId = _userId;
       if (userId == null) return;
 
+      // Use upsert via adminClient (service role) so that preference rows
+      // missing from the seed function are created on first toggle.
       await _jwtHandler.executeWithRecovery(
-        () => _supabase.rpc('set_notification_preference', params: {
-          'p_user_id': userId,
-          'p_notification_type': type.toJson(),
-          'p_push_enabled': pushEnabled,
-          'p_sms_enabled': smsEnabled,
-        }),
+        () => _supabaseProvider.adminClient
+            .from('admin_event_preferences')
+            .upsert(
+              {
+                'admin_id': userId,
+                'event_type': type.toJson(),
+                'fcm_enabled': pushEnabled,
+                'sms_enabled': smsEnabled,
+                'updated_at': DateTime.now().toIso8601String(),
+              },
+              onConflict: 'admin_id,event_type',
+            ),
         'update notification preference',
       );
     } catch (e) {
@@ -256,9 +267,9 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
       if (userId == null) return;
 
       await _jwtHandler.executeWithRecovery(
-        () => _supabase.rpc(
-          'create_default_admin_notification_preferences',
-          params: {'p_user_id': userId},
+        () => _adminSupabase.rpc(
+          'create_default_admin_event_preferences',
+          params: {'p_admin_id': userId},
         ),
         'initialize default preferences',
       );
@@ -268,20 +279,17 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   }
 
   AdminNotificationEntity _mapToEntity(Map<String, dynamic> json) {
-    AdminNotificationType? type;
-    final typeStr = json['type'] as String?;
-    if (typeStr != null && _adminNotificationTypes.contains(typeStr)) {
-      type = AdminNotificationType.fromString(typeStr);
-    }
-
     return AdminNotificationEntity(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
+      adminId: json['admin_id'] as String,
+      eventType: AdminNotificationType.fromString(
+        json['event_type'] as String,
+      ),
       message: json['message'] as String,
       isRead: json['is_read'] as bool? ?? false,
       archived: json['archived'] as bool? ?? false,
-      type: type,
       relatedId: json['related_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
       deliveryMethod: json['delivery_method'] as String?,
       sentAt: json['sent_at'] != null
           ? DateTime.parse(json['sent_at'] as String)
@@ -293,11 +301,11 @@ class NotificationsRepositoryImpl implements NotificationsRepository {
   NotificationPreferenceEntity _mapToPreference(Map<String, dynamic> json) {
     return NotificationPreferenceEntity(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
+      userId: json['admin_id'] as String,
       type: AdminNotificationType.fromString(
-        json['notification_type'] as String,
+        json['event_type'] as String,
       ),
-      pushEnabled: json['push_enabled'] as bool? ?? false,
+      pushEnabled: json['fcm_enabled'] as bool? ?? false,
       smsEnabled: json['sms_enabled'] as bool? ?? false,
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)

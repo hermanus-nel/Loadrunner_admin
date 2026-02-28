@@ -1,5 +1,6 @@
 // lib/features/audit_logs/presentation/screens/audit_logs_screen.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -684,7 +685,7 @@ class _LogDetailSheet extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: CircleAvatar(
                   backgroundImage: log.admin?.profilePhotoUrl != null
-                      ? NetworkImage(log.admin!.profilePhotoUrl!)
+                      ? CachedNetworkImageProvider(log.admin!.profilePhotoUrl!)
                       : null,
                   child: log.admin?.profilePhotoUrl == null
                       ? Text(log.admin?.initials ?? 'A')
@@ -705,10 +706,17 @@ class _LogDetailSheet extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(_getTargetIcon(log.targetType)),
-                  title: Text(log.targetTypeDisplay),
+                  title: Text(
+                    log.targetName != null
+                        ? '${log.targetTypeDisplay}: ${log.targetName}'
+                        : log.targetTypeDisplay,
+                  ),
                   subtitle: Text(
-                    log.targetId!,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    'ID: ${log.targetId!}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.outline,
+                      fontSize: 11,
+                    ),
                   ),
                   trailing: onTargetTap != null
                       ? TextButton(

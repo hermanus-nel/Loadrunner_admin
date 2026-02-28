@@ -506,8 +506,8 @@ class ShipperRecentShipment extends Equatable {
   factory ShipperRecentShipment.fromJson(Map<String, dynamic> json) {
     return ShipperRecentShipment(
       id: json['id'] as String,
-      pickupLocation: json['pickup_address'] as String? ?? 'Unknown',
-      deliveryLocation: json['dropoff_address'] as String? ?? 'Unknown',
+      pickupLocation: json['pickup_location_name'] as String? ?? 'Unknown',
+      deliveryLocation: json['dropoff_location_name'] as String? ?? 'Unknown',
       status: json['status'] as String? ?? 'Unknown',
       amount: (json['amount'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['created_at'] as String),

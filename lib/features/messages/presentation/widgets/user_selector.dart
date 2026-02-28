@@ -1,5 +1,6 @@
 // lib/features/messages/presentation/widgets/user_selector.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,6 +98,8 @@ class _UserSelectorState extends ConsumerState<UserSelector> {
                           value,
                           role: _selectedRole,
                         );
+                  } else {
+                    ref.read(userSearchNotifierProvider.notifier).clear();
                   }
                 },
                 autofocus: true,
@@ -169,7 +172,7 @@ class _UserSelectorState extends ConsumerState<UserSelector> {
   Widget _buildResults(BuildContext context, UserSearchState state) {
     final theme = Theme.of(context);
 
-    if (!_isSearching) {
+    if (!_isSearching || _searchController.text.length < 2) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -181,7 +184,9 @@ class _UserSelectorState extends ConsumerState<UserSelector> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Start typing to search users',
+              _isSearching
+                  ? 'Type at least 2 characters to search'
+                  : 'Start typing to search users',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -213,7 +218,31 @@ class _UserSelectorState extends ConsumerState<UserSelector> {
               color: theme.colorScheme.error,
             ),
             const SizedBox(height: 16),
-            Text('Error: ${state.error}'),
+            Text(
+              'Error searching users',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${state.error}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                ref.read(userSearchNotifierProvider.notifier).search(
+                      _searchController.text,
+                      role: _selectedRole,
+                    );
+              },
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
           ],
         ),
       );
@@ -284,7 +313,7 @@ class UserTile extends StatelessWidget {
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
         backgroundImage:
-            user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) : null,
+            user.profilePhotoUrl != null ? CachedNetworkImageProvider(user.profilePhotoUrl!) : null,
         child: user.profilePhotoUrl == null
             ? Text(
                 user.initials,
@@ -474,7 +503,7 @@ class _MultiUserSelectorState extends ConsumerState<MultiUserSelector> {
                 return Chip(
                   avatar: CircleAvatar(
                     backgroundImage: user.profilePhotoUrl != null
-                        ? NetworkImage(user.profilePhotoUrl!)
+                        ? CachedNetworkImageProvider(user.profilePhotoUrl!)
                         : null,
                     child: user.profilePhotoUrl == null
                         ? Text(user.initials[0])

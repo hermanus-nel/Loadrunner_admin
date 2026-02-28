@@ -632,27 +632,22 @@ class MessagesRepositoryImpl implements MessagesRepository {
     String? role,
     int limit = 20,
   }) async {
-    try {
-      var dbQuery = _supabase
-          .from('users')
-          .select('id, first_name, last_name, phone_number, email, role, profile_photo_url')
-          .or('first_name.ilike.%$query%,last_name.ilike.%$query%,phone_number.ilike.%$query%,email.ilike.%$query%');
+    var dbQuery = _supabase
+        .from('users')
+        .select('id, first_name, last_name, phone_number, email, role, profile_photo_url')
+        .or('first_name.ilike.%$query%,last_name.ilike.%$query%,phone_number.ilike.%$query%,email.ilike.%$query%');
 
-      if (role != null) {
-        dbQuery = dbQuery.eq('role', role);
-      }
-
-      final result = await _jwtHandler.executeWithRecovery(
-() => dbQuery.limit(limit),
-'search users',
-      );
-
-      final data = result as List<dynamic>;
-      return data.map((json) => MessageUserInfo.fromJson(json as Map<String, dynamic>)).toList();
-    } catch (e) {
-      debugPrint('Error searching users: $e');
-      return [];
+    if (role != null) {
+      dbQuery = dbQuery.eq('role', role);
     }
+
+    final result = await _jwtHandler.executeWithRecovery(
+      () => dbQuery.limit(limit),
+      'search users',
+    );
+
+    final data = result as List<dynamic>;
+    return data.map((json) => MessageUserInfo.fromJson(json as Map<String, dynamic>)).toList();
   }
 
   @override

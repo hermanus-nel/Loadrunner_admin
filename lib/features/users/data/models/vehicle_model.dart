@@ -25,6 +25,20 @@ class VehicleModel {
   final String? driverName;
   final String? driverPhone;
 
+  // Per-document review fields
+  final String? registrationDocStatus;
+  final String? registrationDocVerifiedBy;
+  final DateTime? registrationDocVerifiedAt;
+  final String? registrationDocRejectionReason;
+  final String? insuranceDocStatus;
+  final String? insuranceDocVerifiedBy;
+  final DateTime? insuranceDocVerifiedAt;
+  final String? insuranceDocRejectionReason;
+  final String? roadworthyDocStatus;
+  final String? roadworthyDocVerifiedBy;
+  final DateTime? roadworthyDocVerifiedAt;
+  final String? roadworthyDocRejectionReason;
+
   VehicleModel({
     required this.id,
     required this.driverId,
@@ -48,6 +62,18 @@ class VehicleModel {
     this.createdAt,
     this.driverName,
     this.driverPhone,
+    this.registrationDocStatus,
+    this.registrationDocVerifiedBy,
+    this.registrationDocVerifiedAt,
+    this.registrationDocRejectionReason,
+    this.insuranceDocStatus,
+    this.insuranceDocVerifiedBy,
+    this.insuranceDocVerifiedAt,
+    this.insuranceDocRejectionReason,
+    this.roadworthyDocStatus,
+    this.roadworthyDocVerifiedBy,
+    this.roadworthyDocVerifiedAt,
+    this.roadworthyDocRejectionReason,
   });
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
@@ -105,6 +131,27 @@ class VehicleModel {
           : null,
       driverName: driverName,
       driverPhone: driverPhone,
+      registrationDocStatus: json['registration_doc_status'] as String?,
+      registrationDocVerifiedBy: json['registration_doc_verified_by'] as String?,
+      registrationDocVerifiedAt: json['registration_doc_verified_at'] != null
+          ? DateTime.tryParse(json['registration_doc_verified_at'] as String)
+          : null,
+      registrationDocRejectionReason:
+          json['registration_doc_rejection_reason'] as String?,
+      insuranceDocStatus: json['insurance_doc_status'] as String?,
+      insuranceDocVerifiedBy: json['insurance_doc_verified_by'] as String?,
+      insuranceDocVerifiedAt: json['insurance_doc_verified_at'] != null
+          ? DateTime.tryParse(json['insurance_doc_verified_at'] as String)
+          : null,
+      insuranceDocRejectionReason:
+          json['insurance_doc_rejection_reason'] as String?,
+      roadworthyDocStatus: json['roadworthy_doc_status'] as String?,
+      roadworthyDocVerifiedBy: json['roadworthy_doc_verified_by'] as String?,
+      roadworthyDocVerifiedAt: json['roadworthy_doc_verified_at'] != null
+          ? DateTime.tryParse(json['roadworthy_doc_verified_at'] as String)
+          : null,
+      roadworthyDocRejectionReason:
+          json['roadworthy_doc_rejection_reason'] as String?,
     );
   }
 
@@ -157,6 +204,18 @@ class VehicleModel {
       createdAt: createdAt,
       driverName: driverName,
       driverPhone: driverPhone,
+      registrationDocStatus: registrationDocStatus,
+      registrationDocVerifiedBy: registrationDocVerifiedBy,
+      registrationDocVerifiedAt: registrationDocVerifiedAt,
+      registrationDocRejectionReason: registrationDocRejectionReason,
+      insuranceDocStatus: insuranceDocStatus,
+      insuranceDocVerifiedBy: insuranceDocVerifiedBy,
+      insuranceDocVerifiedAt: insuranceDocVerifiedAt,
+      insuranceDocRejectionReason: insuranceDocRejectionReason,
+      roadworthyDocStatus: roadworthyDocStatus,
+      roadworthyDocVerifiedBy: roadworthyDocVerifiedBy,
+      roadworthyDocVerifiedAt: roadworthyDocVerifiedAt,
+      roadworthyDocRejectionReason: roadworthyDocRejectionReason,
     );
   }
 
@@ -184,6 +243,18 @@ class VehicleModel {
       createdAt: entity.createdAt,
       driverName: entity.driverName,
       driverPhone: entity.driverPhone,
+      registrationDocStatus: entity.registrationDocStatus,
+      registrationDocVerifiedBy: entity.registrationDocVerifiedBy,
+      registrationDocVerifiedAt: entity.registrationDocVerifiedAt,
+      registrationDocRejectionReason: entity.registrationDocRejectionReason,
+      insuranceDocStatus: entity.insuranceDocStatus,
+      insuranceDocVerifiedBy: entity.insuranceDocVerifiedBy,
+      insuranceDocVerifiedAt: entity.insuranceDocVerifiedAt,
+      insuranceDocRejectionReason: entity.insuranceDocRejectionReason,
+      roadworthyDocStatus: entity.roadworthyDocStatus,
+      roadworthyDocVerifiedBy: entity.roadworthyDocVerifiedBy,
+      roadworthyDocVerifiedAt: entity.roadworthyDocVerifiedAt,
+      roadworthyDocRejectionReason: entity.roadworthyDocRejectionReason,
     );
   }
 }

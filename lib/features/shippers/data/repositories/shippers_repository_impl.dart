@@ -36,7 +36,10 @@ class ShippersRepositoryImpl implements ShippersRepository {
         // Build query for shippers (role = 'Shipper')
         var query = _supabase
             .from('users')
-            .select('*')
+            .select('id, phone_number, first_name, last_name, email, '
+                'profile_photo_url, created_at, updated_at, last_login_at, '
+                'is_suspended, suspended_at, suspended_reason, suspended_by, '
+                'suspension_ends_at, address_name')
             .eq('role', 'Shipper');
 
         // Apply status filter
@@ -131,7 +134,10 @@ class ShippersRepositoryImpl implements ShippersRepository {
         // Fetch shipper
         final result = await _supabase
             .from('users')
-            .select('*')
+            .select('id, phone_number, first_name, last_name, email, '
+                'profile_photo_url, created_at, updated_at, last_login_at, '
+                'is_suspended, suspended_at, suspended_reason, suspended_by, '
+                'suspension_ends_at, address_name')
             .eq('id', shipperId)
             .eq('role', 'Shipper')
             .single();
@@ -144,7 +150,7 @@ class ShippersRepositoryImpl implements ShippersRepository {
         // Fetch recent shipments
         final shipmentsResult = await _supabase
             .from('freight_posts')
-            .select('id, pickup_address, dropoff_address, status, created_at')
+            .select('id, pickup_location_name, dropoff_location_name, status, created_at')
             .eq('shipper_id', shipperId)
             .order('created_at', ascending: false)
             .limit(10);
@@ -390,7 +396,10 @@ class ShippersRepositoryImpl implements ShippersRepository {
       try {
         final result = await _supabase
             .from('users')
-            .select('*')
+            .select('id, phone_number, first_name, last_name, email, '
+                'profile_photo_url, created_at, updated_at, last_login_at, '
+                'is_suspended, suspended_at, suspended_reason, suspended_by, '
+                'suspension_ends_at, address_name')
             .eq('role', 'Shipper')
             .eq('is_suspended', false)
             .not('last_login_at', 'is', null)
@@ -429,7 +438,10 @@ class ShippersRepositoryImpl implements ShippersRepository {
 
         final result = await _supabase
             .from('users')
-            .select('*')
+            .select('id, phone_number, first_name, last_name, email, '
+                'profile_photo_url, created_at, updated_at, last_login_at, '
+                'is_suspended, suspended_at, suspended_reason, suspended_by, '
+                'suspension_ends_at, address_name')
             .eq('role', 'Shipper')
             .gte('created_at', daysAgo.toIso8601String())
             .order('created_at', ascending: false)

@@ -9,6 +9,8 @@ class VehicleApprovalHistoryItem {
   final String? adminName;
   final String? previousStatus;
   final String newStatus;
+  final String? action;
+  final String? documentType;
   final String? reason;
   final String? notes;
   final DateTime createdAt;
@@ -20,6 +22,8 @@ class VehicleApprovalHistoryItem {
     this.adminName,
     this.previousStatus,
     required this.newStatus,
+    this.action,
+    this.documentType,
     this.reason,
     this.notes,
     required this.createdAt,
@@ -114,6 +118,35 @@ abstract class VehiclesRepository {
   Future<bool> reinstateVehicle({
     required String vehicleId,
     required String adminId,
+    String? notes,
+  });
+
+  // ==========================================================================
+  // VEHICLE DOCUMENT REVIEW METHODS
+  // ==========================================================================
+
+  /// Approve a specific vehicle document (Registration/Insurance/Roadworthy)
+  Future<bool> approveVehicleDocument({
+    required String vehicleId,
+    required String docType,
+    required String adminId,
+  });
+
+  /// Reject a specific vehicle document
+  Future<bool> rejectVehicleDocument({
+    required String vehicleId,
+    required String docType,
+    required String adminId,
+    required String reason,
+    String? notes,
+  });
+
+  /// Request re-upload for a specific vehicle document
+  Future<bool> requestVehicleDocumentReupload({
+    required String vehicleId,
+    required String docType,
+    required String adminId,
+    required String reason,
     String? notes,
   });
 

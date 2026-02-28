@@ -139,10 +139,9 @@ enum DisputeStatus {
         return DisputeStatus.open;
       case 'investigating':
       case 'underreview':
-      case 'under_review':
         return DisputeStatus.investigating;
       case 'awaitingevidence':
-      case 'awaiting_evidence':
+      case 'awaitingresponse':
         return DisputeStatus.awaitingEvidence;
       case 'resolved':
         return DisputeStatus.resolved;
@@ -177,9 +176,9 @@ enum DisputeStatus {
       case DisputeStatus.open:
         return 'open';
       case DisputeStatus.investigating:
-        return 'investigating';
+        return 'under_review';
       case DisputeStatus.awaitingEvidence:
-        return 'awaiting_evidence';
+        return 'awaiting_response';
       case DisputeStatus.resolved:
         return 'resolved';
       case DisputeStatus.escalated:
@@ -337,8 +336,8 @@ class DisputeShipmentInfo {
   factory DisputeShipmentInfo.fromJson(Map<String, dynamic> json) {
     return DisputeShipmentInfo(
       id: json['id'] as String,
-      pickupLocation: json['pickup_location'] as String?,
-      deliveryLocation: json['delivery_location'] as String?,
+      pickupLocation: json['pickup_location_name'] as String?,
+      deliveryLocation: json['dropoff_location_name'] as String?,
       status: json['status'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)

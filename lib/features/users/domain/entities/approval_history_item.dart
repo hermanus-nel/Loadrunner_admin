@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 class ApprovalHistoryItem extends Equatable {
   final String id;
   final String driverId;
-  final String adminId;
+  final String? adminId;
   final String? adminName;
   final String? previousStatus;
   final String newStatus;
@@ -17,7 +17,7 @@ class ApprovalHistoryItem extends Equatable {
   const ApprovalHistoryItem({
     required this.id,
     required this.driverId,
-    required this.adminId,
+    this.adminId,
     this.adminName,
     this.previousStatus,
     required this.newStatus,

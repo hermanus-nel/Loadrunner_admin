@@ -1,11 +1,15 @@
 // lib/features/shippers/presentation/screens/shipper_detail_screen.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/components/loading_state.dart';
+import '../../../messages/domain/entities/message_entity.dart';
 import '../../domain/entities/shipper_entity.dart';
 import '../providers/shippers_providers.dart';
 import '../widgets/shipper_tile.dart';
@@ -38,6 +42,18 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
     super.dispose();
   }
 
+  void _navigateToMessageShipper(ShipperEntity shipper) {
+    final recipient = MessageUserInfo(
+      id: shipper.id,
+      fullName: shipper.displayName,
+      phone: shipper.phoneNumber,
+      email: shipper.email,
+      role: 'Shipper',
+      profilePhotoUrl: shipper.profilePhotoUrl,
+    );
+    context.push('/messages/compose', extra: {'recipient': recipient});
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -50,13 +66,9 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
         actions: [
           if (state.shipper != null)
             IconButton(
-              icon: const Icon(Icons.message),
+              icon: const Icon(Icons.message_outlined),
               tooltip: 'Send Message',
-              onPressed: () {
-                context.push('/messages/compose', extra: {
-                  'recipientId': widget.shipperId,
-                });
-              },
+              onPressed: () => _navigateToMessageShipper(state.shipper!),
             ),
           PopupMenuButton<String>(
             onSelected: (value) => _handleMenuAction(value),
@@ -109,7 +121,35 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
     final theme = Theme.of(context);
 
     if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          // Profile header shimmer
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  ShimmerPlaceholder(width: 96, height: 96, borderRadius: BorderRadius.all(Radius.circular(48))),
+                  SizedBox(height: 16),
+                  ShimmerPlaceholder(width: 180, height: 20, borderRadius: BorderRadius.all(Radius.circular(4))),
+                  SizedBox(height: 8),
+                  ShimmerPlaceholder(width: 120, height: 14, borderRadius: BorderRadius.all(Radius.circular(4))),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const ShimmerCard(height: 60),
+          const SizedBox(height: 16),
+          const ShimmerCard(height: 200),
+          const SizedBox(height: 16),
+          const ShimmerCard(height: 120),
+          const SizedBox(height: 16),
+          const ShimmerCard(height: 180),
+        ],
+      );
     }
 
     if (state.error != null && state.shipper == null) {
@@ -192,7 +232,7 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
                       ? theme.colorScheme.errorContainer
                       : theme.colorScheme.primaryContainer,
                   backgroundImage: shipper.profilePhotoUrl != null
-                      ? NetworkImage(shipper.profilePhotoUrl!)
+                      ? CachedNetworkImageProvider(shipper.profilePhotoUrl!)
                       : null,
                   child: shipper.profilePhotoUrl == null
                       ? Text(
@@ -482,8 +522,11 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.call),
-                  onPressed: () {
-                    // TODO: Launch phone dialer
+                  onPressed: () async {
+                    final uri = Uri(scheme: 'tel', path: shipper.phoneNumber);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
                   },
                 ),
               ],
@@ -545,7 +588,9 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
                 ),
                 TextButton(
                   onPressed: () {
-                    // TODO: Navigate to full shipments list
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Shipments view coming soon')),
+                    );
                   },
                   child: const Text('View All'),
                 ),
@@ -597,7 +642,9 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
                         )
                       : null,
                   onTap: () {
-                    // TODO: Navigate to shipment detail
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Shipment detail coming soon')),
+                    );
                   },
                 )),
         ],
@@ -676,46 +723,60 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.message),
+                icon: const Icon(Icons.message_outlined, size: 18),
                 label: const Text('Message'),
-                onPressed: () {
-                  context.push('/messages/compose', extra: {
-                    'recipientId': widget.shipperId,
-                  });
-                },
+                onPressed: () => _navigateToMessageShipper(shipper),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Expanded(
               flex: 2,
               child: shipper.isCurrentlySuspended
-                  ? FilledButton.icon(
+                  ? OutlinedButton.icon(
                       icon: state.isUpdating
                           ? const SizedBox(
-                              width: 20,
-                              height: 20,
+                              width: 18,
+                              height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.check_circle),
+                          : const Icon(Icons.check_circle, size: 18),
                       label: const Text('Unsuspend'),
-                      style: FilledButton.styleFrom(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
                         backgroundColor: Colors.green,
+                        side: const BorderSide(color: Colors.green),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: state.isUpdating
                           ? null
                           : () => _showUnsuspendDialog(),
                     )
-                  : FilledButton.icon(
+                  : OutlinedButton.icon(
                       icon: state.isUpdating
                           ? const SizedBox(
-                              width: 20,
-                              height: 20,
+                              width: 18,
+                              height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.block),
+                          : const Icon(Icons.block, size: 18),
                       label: const Text('Suspend'),
-                      style: FilledButton.styleFrom(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
                         backgroundColor: theme.colorScheme.error,
+                        side: BorderSide(color: theme.colorScheme.error),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: state.isUpdating
                           ? null
@@ -737,10 +798,12 @@ class _ShipperDetailScreenState extends ConsumerState<ShipperDetailScreen> {
         );
         break;
       case 'view_shipments':
-        // TODO: Navigate to shipments with filter
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Shipments view coming soon')),
+        );
         break;
       case 'view_disputes':
-        context.push('/disputes'); // TODO: Add filter param
+        context.push('/disputes?shipperId=${widget.shipperId}');
         break;
       case 'refresh':
         ref.read(shipperDetailNotifierProvider.notifier).fetchShipperDetail(widget.shipperId);

@@ -61,6 +61,9 @@ class MockDriversRepository implements DriversRepository {
         case DriverVerificationStatus.rejected:
           rejected++;
           break;
+        case DriverVerificationStatus.documentsRequested:
+        case DriverVerificationStatus.suspended:
+          break;
       }
     }
     return DriverStatusCounts(

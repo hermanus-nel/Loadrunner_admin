@@ -145,6 +145,9 @@ class DriverProfileController extends StateNotifier<AsyncValue<DriverProfileData
       // Refresh profile to show updated status
       await refreshProfile();
 
+      // Refresh drivers list so tab counts and list reflect the change
+      _ref.read(driversListNotifierProvider.notifier).refresh();
+
       return true;
     } catch (e) {
       debugPrint('❌ Error approving driver: $e');
@@ -176,6 +179,9 @@ class DriverProfileController extends StateNotifier<AsyncValue<DriverProfileData
 
       // Refresh profile to show updated status
       await refreshProfile();
+
+      // Refresh drivers list so tab counts and list reflect the change
+      _ref.read(driversListNotifierProvider.notifier).refresh();
 
       return true;
     } catch (e) {
@@ -209,6 +215,9 @@ class DriverProfileController extends StateNotifier<AsyncValue<DriverProfileData
 
       // Refresh profile to show updated status
       await refreshProfile();
+
+      // Refresh drivers list so tab counts and list reflect the change
+      _ref.read(driversListNotifierProvider.notifier).refresh();
 
       return true;
     } catch (e) {
@@ -270,4 +279,11 @@ class DriverProfileController extends StateNotifier<AsyncValue<DriverProfileData
 final driverCountsProvider = FutureProvider.autoDispose<DriverStatusCounts>((ref) async {
   final repository = ref.read(driversRepositoryProvider);
   return repository.fetchDriverCounts();
+});
+
+/// Provider for the pending bank verifications count (for badge)
+final pendingBankVerificationsCountProvider =
+    FutureProvider.autoDispose<int>((ref) async {
+  final repository = ref.read(driversProfileRepositoryProvider);
+  return repository.fetchPendingBankVerificationsCount();
 });

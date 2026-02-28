@@ -22,6 +22,10 @@ class AppConfig {
   /// Supabase anonymous key
   String get supabaseAnonKey => dotenv.env['SUPABASE_ANONKEY'] ?? '';
 
+  /// Supabase service role key (bypasses RLS for admin operations)
+  String get supabaseServiceRoleKey =>
+      dotenv.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+
   /// Check if Supabase is configured
   bool get isSupabaseConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;

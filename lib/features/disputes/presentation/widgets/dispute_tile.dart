@@ -1,5 +1,6 @@
 // lib/features/disputes/presentation/widgets/dispute_tile.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -165,7 +166,7 @@ class DisputeTile extends StatelessWidget {
                       radius: 12,
                       backgroundColor: theme.colorScheme.primaryContainer,
                       backgroundImage: dispute.raisedBy!.profilePhotoUrl != null
-                          ? NetworkImage(dispute.raisedBy!.profilePhotoUrl!)
+                          ? CachedNetworkImageProvider(dispute.raisedBy!.profilePhotoUrl!)
                           : null,
                       child: dispute.raisedBy!.profilePhotoUrl == null
                           ? Text(
@@ -188,7 +189,7 @@ class DisputeTile extends StatelessWidget {
                       radius: 12,
                       backgroundColor: theme.colorScheme.secondaryContainer,
                       backgroundImage: dispute.raisedAgainst!.profilePhotoUrl != null
-                          ? NetworkImage(dispute.raisedAgainst!.profilePhotoUrl!)
+                          ? CachedNetworkImageProvider(dispute.raisedAgainst!.profilePhotoUrl!)
                           : null,
                       child: dispute.raisedAgainst!.profilePhotoUrl == null
                           ? Text(

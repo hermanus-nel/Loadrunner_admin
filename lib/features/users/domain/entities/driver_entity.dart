@@ -4,7 +4,9 @@
 enum DriverVerificationStatus {
   pending,
   approved,
-  rejected;
+  rejected,
+  documentsRequested,
+  suspended;
 
   /// Create from string value
   static DriverVerificationStatus fromString(String? value) {
@@ -13,9 +15,23 @@ enum DriverVerificationStatus {
         return DriverVerificationStatus.approved;
       case 'rejected':
         return DriverVerificationStatus.rejected;
+      case 'documents_requested':
+        return DriverVerificationStatus.documentsRequested;
+      case 'suspended':
+        return DriverVerificationStatus.suspended;
       case 'pending':
       default:
         return DriverVerificationStatus.pending;
+    }
+  }
+
+  /// The snake_case name used by StatusBadge and the database.
+  String get statusName {
+    switch (this) {
+      case DriverVerificationStatus.documentsRequested:
+        return 'documents_requested';
+      default:
+        return name;
     }
   }
 
@@ -28,6 +44,10 @@ enum DriverVerificationStatus {
         return 'Approved';
       case DriverVerificationStatus.rejected:
         return 'Rejected';
+      case DriverVerificationStatus.documentsRequested:
+        return 'Docs Requested';
+      case DriverVerificationStatus.suspended:
+        return 'Suspended';
     }
   }
 }

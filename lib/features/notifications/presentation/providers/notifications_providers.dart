@@ -26,6 +26,12 @@ final notificationsRepositoryProvider = Provider<NotificationsRepository>((ref) 
 // ============================================================
 
 final unreadNotificationCountProvider = StreamProvider<int>((ref) {
+  // Re-create the stream when userId changes (login/logout).
+  // Without this, the provider may be created before auth completes,
+  // capture a null userId, and return Stream.value(0) forever.
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return Stream.value(0);
+
   final repo = ref.watch(notificationsRepositoryProvider);
   return repo.watchUnreadCount();
 });

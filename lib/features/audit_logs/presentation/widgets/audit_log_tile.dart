@@ -1,5 +1,6 @@
 // lib/features/audit_logs/presentation/widgets/audit_log_tile.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -161,7 +162,7 @@ class AuditLogTile extends StatelessWidget {
       radius: 16,
       backgroundColor: theme.colorScheme.primaryContainer,
       backgroundImage: log.admin?.profilePhotoUrl != null
-          ? NetworkImage(log.admin!.profilePhotoUrl!)
+          ? CachedNetworkImageProvider(log.admin!.profilePhotoUrl!)
           : null,
       child: log.admin?.profilePhotoUrl == null
           ? Text(
@@ -197,11 +198,15 @@ class AuditLogTile extends StatelessWidget {
               color: theme.colorScheme.onSecondaryContainer,
             ),
             const SizedBox(width: 4),
-            Text(
-              '${log.targetTypeDisplay}: ${_truncateId(log.targetId!)}',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontFamily: 'monospace',
+            Flexible(
+              child: Text(
+                log.targetName != null
+                    ? '${log.targetTypeDisplay}: ${log.targetName}'
+                    : log.targetTypeDisplay,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (onTargetTap != null) ...[
@@ -233,11 +238,6 @@ class AuditLogTile extends StatelessWidget {
     } else {
       return DateFormat.MMMd().format(dateTime);
     }
-  }
-
-  String _truncateId(String id) {
-    if (id.length <= 12) return id;
-    return '${id.substring(0, 8)}...';
   }
 
   Color _getCategoryColor(AuditActionCategory category) {

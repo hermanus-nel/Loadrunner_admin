@@ -612,16 +612,22 @@ class _TransactionDetailScreenState
                   onPressed: state.isProcessingAction
                       ? null
                       : () => _showRefundDialog(payment),
-                  icon: const Icon(Icons.replay),
+                  icon: const Icon(Icons.replay, size: 18),
                   label: const Text('Process Refund'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
 
             // Retry button (for failed payments)
             if (payment.canRetry) ...[
-              if (payment.canRefund) const SizedBox(width: 12),
+              if (payment.canRefund) const SizedBox(width: 8),
               Expanded(
-                child: ElevatedButton.icon(
+                child: OutlinedButton.icon(
                   onPressed: state.isProcessingAction
                       ? null
                       : () => _showRetryDialog(payment),
@@ -631,8 +637,17 @@ class _TransactionDetailScreenState
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.refresh),
+                      : const Icon(Icons.refresh, size: 18),
                   label: const Text('Retry Payment'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    backgroundColor: theme.colorScheme.primary,
+                    side: BorderSide(color: theme.colorScheme.primary),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
             ],

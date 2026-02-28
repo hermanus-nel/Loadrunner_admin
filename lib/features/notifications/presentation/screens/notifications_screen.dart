@@ -23,6 +23,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Refresh the list every time the screen is opened so newly
+    // arrived notifications (e.g. from FCM) appear immediately.
+    Future.microtask(
+      () => ref.read(notificationsListNotifierProvider.notifier).refresh(),
+    );
   }
 
   @override
@@ -164,52 +169,56 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           const SizedBox(width: AppDimensions.spacingXs),
           FilterChip(
             label: const Text('Disputes'),
-            selected: state.typeFilter == AdminNotificationType.disputeFiled ||
-                state.typeFilter == AdminNotificationType.disputeEscalated ||
-                state.typeFilter == AdminNotificationType.disputeResolved,
+            selected:
+                state.typeFilter == AdminNotificationType.disputeLodged ||
+                    state.typeFilter ==
+                        AdminNotificationType.disputeEscalated ||
+                    state.typeFilter ==
+                        AdminNotificationType.disputeResolved,
             onSelected: (_) {
-              // Cycle through dispute types or set to first
               ref
                   .read(notificationsListNotifierProvider.notifier)
-                  .setTypeFilter(AdminNotificationType.disputeFiled);
+                  .setTypeFilter(AdminNotificationType.disputeLodged);
             },
           ),
           const SizedBox(width: AppDimensions.spacingXs),
           FilterChip(
             label: const Text('Drivers'),
-            selected: state.typeFilter ==
-                    AdminNotificationType.driverPendingApproval ||
-                state.typeFilter ==
-                    AdminNotificationType.driverDocumentUploaded ||
-                state.typeFilter == AdminNotificationType.driverSuspended,
+            selected:
+                state.typeFilter == AdminNotificationType.newUser ||
+                    state.typeFilter ==
+                        AdminNotificationType.driverRegistered ||
+                    state.typeFilter ==
+                        AdminNotificationType.driverDocumentUploaded ||
+                    state.typeFilter ==
+                        AdminNotificationType.driverSuspended,
             onSelected: (_) {
               ref
                   .read(notificationsListNotifierProvider.notifier)
-                  .setTypeFilter(AdminNotificationType.driverPendingApproval);
+                  .setTypeFilter(AdminNotificationType.driverRegistered);
             },
           ),
           const SizedBox(width: AppDimensions.spacingXs),
           FilterChip(
             label: const Text('Payments'),
-            selected:
-                state.typeFilter == AdminNotificationType.paymentFailed ||
-                    state.typeFilter ==
-                        AdminNotificationType.paymentRefundRequested,
+            selected: state.typeFilter ==
+                    AdminNotificationType.paymentCompleted ||
+                state.typeFilter == AdminNotificationType.driverPayout,
             onSelected: (_) {
               ref
                   .read(notificationsListNotifierProvider.notifier)
-                  .setTypeFilter(AdminNotificationType.paymentFailed);
+                  .setTypeFilter(AdminNotificationType.paymentCompleted);
             },
           ),
           const SizedBox(width: AppDimensions.spacingXs),
           FilterChip(
-            label: const Text('System'),
+            label: const Text('Shipments'),
             selected:
-                state.typeFilter == AdminNotificationType.adminSystemAlert,
+                state.typeFilter == AdminNotificationType.newShipment,
             onSelected: (_) {
               ref
                   .read(notificationsListNotifierProvider.notifier)
-                  .setTypeFilter(AdminNotificationType.adminSystemAlert);
+                  .setTypeFilter(AdminNotificationType.newShipment);
             },
           ),
         ],
@@ -225,26 +234,40 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           .markAsRead(notification.id);
     }
 
-    // Navigate based on type
-    final type = notification.type;
+    // Navigate based on event type
     final relatedId = notification.relatedId;
+    if (relatedId == null) return;
 
-    if (type == null || relatedId == null) return;
-
-    switch (type) {
-      case AdminNotificationType.disputeFiled:
+    switch (notification.eventType) {
+      case AdminNotificationType.disputeLodged:
       case AdminNotificationType.disputeEscalated:
       case AdminNotificationType.disputeResolved:
         context.push(AppRoutes.disputeDetailPath(relatedId));
-      case AdminNotificationType.driverPendingApproval:
+      case AdminNotificationType.driverRegistered:
       case AdminNotificationType.driverDocumentUploaded:
       case AdminNotificationType.driverSuspended:
         context.push(AppRoutes.driverDetailPath(relatedId));
-      case AdminNotificationType.paymentFailed:
-      case AdminNotificationType.paymentRefundRequested:
+      case AdminNotificationType.newUser:
+        final role = notification.metadata?['role'] as String?;
+        if (role == 'Shipper') {
+          context.push(AppRoutes.userShipperDetailPath(relatedId));
+        } else {
+          context.push(AppRoutes.driverDetailPath(relatedId));
+        }
+      case AdminNotificationType.paymentCompleted:
         context.push(AppRoutes.transactionDetailPath(relatedId));
-      case AdminNotificationType.adminSystemAlert:
-        break; // No deep link for system alerts
+      case AdminNotificationType.driverPayout:
+        context.push(AppRoutes.transactionDetailPath(relatedId));
+      case AdminNotificationType.newShipment:
+        // Navigate to dashboard — no dedicated shipment detail route
+        context.go(AppRoutes.dashboard);
+      case AdminNotificationType.vehicleAdded:
+      case AdminNotificationType.vehicleDocumentUploaded:
+        // Vehicle events include driver_id in metadata
+        final driverId = notification.metadata?['driver_id'] as String?;
+        if (driverId != null) {
+          context.push(AppRoutes.driverDetailPath(driverId));
+        }
     }
   }
 

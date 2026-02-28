@@ -50,13 +50,14 @@ class DriversRepositoryImpl implements DriversRepository {
                 profile_photo_url,
                 driver_verification_status,
                 created_at,
-                updated_at
+                updated_at,
+                vehicles!vehicles_driver_id_fkey(count)
               ''')
               .eq('role', 'Driver');
 
           // Apply status filter
           if (filter.status != null) {
-            query = query.eq('driver_verification_status', filter.status!.name);
+            query = query.eq('driver_verification_status', filter.status!.statusName);
           }
 
           // Apply search filter
@@ -298,27 +299,25 @@ class DriversRepositoryImpl implements DriversRepository {
 
   Future<List<DriverDocument>> fetchDriverDocuments(String driverId) async {
     try {
-      final response = await _jwtRecoveryHandler.executeWithRecovery(
-        () => _supabaseProvider.client
-            .from('driver_docs')
-            .select('''
-              id,
-              driver_id,
-              doc_type,
-              doc_url,
-              verification_status,
-              verified_at,
-              verified_by,
-              rejection_reason,
-              admin_notes,
-              expiry_date,
-              created_at,
-              modified_at
-            ''')
-            .eq('driver_id', driverId)
-            .order('created_at', ascending: false),
-        'fetch driver documents',
-      );
+      // Use adminClient to bypass RLS — driver_docs has no admin read policy
+      final response = await _supabaseProvider.adminClient
+          .from('driver_docs')
+          .select('''
+            id,
+            driver_id,
+            doc_type,
+            doc_url,
+            verification_status,
+            verified_at,
+            verified_by,
+            rejection_reason,
+            admin_notes,
+            expiry_date,
+            created_at,
+            modified_at
+          ''')
+          .eq('driver_id', driverId)
+          .order('created_at', ascending: false);
 
       final List<dynamic> data = response as List<dynamic>;
       return data

@@ -100,6 +100,13 @@ DEBUG_MODE=true
 
 Environment is loaded via `flutter_dotenv` in `AppConfig.initialize()` (called from `main.dart`).
 
+## Authentication
+
+- **Custom auth only.** This app uses a custom authentication flow via `SessionService` (`lib/core/services/session_service.dart`), NOT Supabase Auth (`supabaseClient.auth`).
+- **Never use `supabaseClient.auth`** (or `Supabase.instance.client.auth`) outside of `session_service.dart`. All login, logout, token refresh, and session state must go through `SessionService`.
+- `SessionService` handles: phone/OTP login via Edge Function, JWT token management, background refresh, and resolving `public.users.id` from `auth.users.id`.
+- Access the current user ID via `SessionService.userId` — this is the canonical `public.users.id`, not `auth.users.id`.
+
 ## Important Notes
 
 - **Do not commit** `.env` or `.env.production` — they are git-ignored.

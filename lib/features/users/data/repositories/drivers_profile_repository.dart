@@ -160,6 +160,21 @@ class DriversProfileRepository {
       newStatus: 'approved',
       notes: notes,
     );
+
+    // Log to admin audit logs
+    try {
+      await _supabase.from('admin_audit_logs').insert({
+        'admin_id': adminId,
+        'action': 'driver_approved',
+        'target_type': 'user',
+        'target_id': driverId,
+        'new_values': {
+          'previous_status': previousStatus,
+          'new_status': 'approved',
+          'notes': notes,
+        },
+      });
+    } catch (_) {}
   }
 
   /// Reject a driver
@@ -192,9 +207,28 @@ class DriversProfileRepository {
       reason: reason,
       notes: notes,
     );
+
+    // Log to admin audit logs
+    try {
+      await _supabase.from('admin_audit_logs').insert({
+        'admin_id': adminId,
+        'action': 'driver_rejected',
+        'target_type': 'user',
+        'target_id': driverId,
+        'new_values': {
+          'previous_status': previousStatus,
+          'new_status': 'rejected',
+          'reason': reason,
+          'notes': notes,
+        },
+      });
+    } catch (_) {}
   }
 
-  /// Request additional documents from driver
+  /// Request additional documents from driver.
+  ///
+  /// Updates both `users.driver_verification_status` AND the individual
+  /// `driver_docs` rows for each requested document type (latest row per type).
   Future<void> requestDocuments(
     String driverId,
     String adminId,
@@ -205,13 +239,44 @@ class DriversProfileRepository {
     final currentData = await _fetchDriverData(driverId);
     final previousStatus = currentData.verificationStatus;
 
-    // Update driver status
+    // Update driver-level verification status
     await _jwtHandler.executeWithRecovery(
       () => _supabase.from('users').update({
         'driver_verification_status': 'documents_requested',
         'verification_notes': message,
       }).eq('id', driverId),
     );
+
+    // Update individual driver_docs rows for each requested doc type.
+    // For each type, find the latest row and set its status.
+    for (final docType in documentTypes) {
+      try {
+        final rows = await _jwtHandler.executeWithRecovery(
+          () => _supabase
+              .from('driver_docs')
+              .select('id')
+              .eq('driver_id', driverId)
+              .eq('doc_type', docType)
+              .order('created_at', ascending: false)
+              .limit(1),
+        );
+
+        final List<dynamic> data = rows as List<dynamic>;
+        if (data.isNotEmpty) {
+          final docId = (data.first as Map<String, dynamic>)['id'] as String;
+          await _jwtHandler.executeWithRecovery(
+            () => _supabase.from('driver_docs').update({
+              'verification_status': 'documents_requested',
+              'admin_notes': message,
+              'modified_at': DateTime.now().toUtc().toIso8601String(),
+            }).eq('id', docId),
+          );
+        }
+      } catch (e) {
+        // Don't break the loop if one doc type fails
+        // The driver-level status is already updated
+      }
+    }
 
     // Log to approval history
     await _logApprovalAction(
@@ -224,7 +289,61 @@ class DriversProfileRepository {
       documentsReviewed: documentTypes,
     );
 
-    // TODO: Create notification for driver
+    // Log to admin audit logs
+    try {
+      await _supabase.from('admin_audit_logs').insert({
+        'admin_id': adminId,
+        'action': 'driver_documents_requested',
+        'target_type': 'user',
+        'target_id': driverId,
+        'new_values': {
+          'previous_status': previousStatus,
+          'new_status': 'documents_requested',
+          'document_types': documentTypes,
+          'message': message,
+        },
+      });
+    } catch (_) {}
+
+    // Send notification to driver
+    final docLabels = documentTypes.map(_getDocTypeLabel).join(', ');
+    try {
+      await _jwtHandler.executeWithRecovery(
+        () => _supabase.from('notifications').insert({
+          'user_id': driverId,
+          'message': 'Please re-upload the following documents: $docLabels. '
+              '${message != null ? message : "Please open your driver profile and upload new copies."}',
+          'type': 'document_reupload_requested',
+          'delivery_method': 'push',
+          'related_id': driverId,
+        }),
+      );
+    } catch (e) {
+      // Don't fail the whole operation if notification fails
+    }
+  }
+
+  /// Get a human-readable label for a document type code.
+  String _getDocTypeLabel(String docType) {
+    switch (docType.toLowerCase()) {
+      case 'license_front':
+        return "Driver's License";
+      case 'id_document':
+      case 'id_front':
+        return 'ID Document';
+      case 'proof_of_address':
+        return 'Proof of Address';
+      case 'pdp':
+        return 'Professional Driving Permit (PDP)';
+      case 'bank_confirmation':
+      case 'bank_document':
+        return 'Bank Confirmation Letter';
+      default:
+        return docType.replaceAll('_', ' ').split(' ').map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        }).join(' ');
+    }
   }
 
   /// Suspend a driver
@@ -261,6 +380,22 @@ class DriversProfileRepository {
           ? 'Suspension ends: ${suspensionEndsAt.toIso8601String()}'
           : 'Indefinite suspension',
     );
+
+    // Log to admin audit logs
+    try {
+      await _supabase.from('admin_audit_logs').insert({
+        'admin_id': adminId,
+        'action': 'driver_suspended',
+        'target_type': 'user',
+        'target_id': driverId,
+        'new_values': {
+          'previous_status': previousStatus,
+          'new_status': 'suspended',
+          'reason': reason,
+          'suspension_ends_at': suspensionEndsAt?.toIso8601String(),
+        },
+      });
+    } catch (_) {}
   }
 
   /// Reinstate a suspended driver
@@ -295,6 +430,41 @@ class DriversProfileRepository {
       reason: 'Reinstated',
       notes: notes,
     );
+
+    // Log to admin audit logs
+    try {
+      await _supabase.from('admin_audit_logs').insert({
+        'admin_id': adminId,
+        'action': 'driver_unsuspended',
+        'target_type': 'user',
+        'target_id': driverId,
+        'new_values': {
+          'previous_status': previousStatus,
+          'new_status': 'approved',
+          'notes': notes,
+        },
+      });
+    } catch (_) {}
+  }
+
+  /// Fetch count of bank accounts pending verification
+  Future<int> fetchPendingBankVerificationsCount() async {
+    try {
+      final response = await _jwtHandler.executeWithRecovery(
+        () => _supabase
+            .from('driver_bank_accounts')
+            .select('id')
+            .eq('is_verified', false)
+            .eq('is_active', true)
+            .isFilter('rejected_at', null),
+      );
+
+      final List<dynamic> data = response as List<dynamic>;
+      return data.length;
+    } catch (e) {
+      // Return 0 if query fails
+      return 0;
+    }
   }
 
   /// Log an approval action to history

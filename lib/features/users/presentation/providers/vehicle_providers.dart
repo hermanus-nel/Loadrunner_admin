@@ -337,6 +337,115 @@ class VehicleDetailController extends StateNotifier<VehicleDetailState> {
   }
 
   // ==========================================================================
+  // DOCUMENT REVIEW ACTIONS
+  // ==========================================================================
+
+  /// Approve a specific vehicle document
+  Future<bool> approveVehicleDocument(String docType) async {
+    state = state.copyWith(isProcessing: true);
+
+    try {
+      final adminId = await _getAdminId();
+      if (adminId == null) {
+        debugPrint('Cannot approve document: No admin ID available');
+        state = state.copyWith(isProcessing: false);
+        return false;
+      }
+
+      final success = await _repository.approveVehicleDocument(
+        vehicleId: _vehicleId,
+        docType: docType,
+        adminId: adminId,
+      );
+
+      if (success) {
+        await refreshVehicle();
+      }
+
+      state = state.copyWith(isProcessing: false);
+      return success;
+    } catch (e) {
+      debugPrint('Error approving vehicle document: $e');
+      state = state.copyWith(isProcessing: false);
+      return false;
+    }
+  }
+
+  /// Reject a specific vehicle document
+  Future<bool> rejectVehicleDocument(
+    String docType,
+    String reason, {
+    String? notes,
+  }) async {
+    state = state.copyWith(isProcessing: true);
+
+    try {
+      final adminId = await _getAdminId();
+      if (adminId == null) {
+        debugPrint('Cannot reject document: No admin ID available');
+        state = state.copyWith(isProcessing: false);
+        return false;
+      }
+
+      final success = await _repository.rejectVehicleDocument(
+        vehicleId: _vehicleId,
+        docType: docType,
+        adminId: adminId,
+        reason: reason,
+        notes: notes,
+      );
+
+      if (success) {
+        await refreshVehicle();
+      }
+
+      state = state.copyWith(isProcessing: false);
+      return success;
+    } catch (e) {
+      debugPrint('Error rejecting vehicle document: $e');
+      state = state.copyWith(isProcessing: false);
+      return false;
+    }
+  }
+
+  /// Request re-upload of a specific vehicle document
+  Future<bool> requestVehicleDocumentReupload(
+    String docType,
+    String reason, {
+    String? notes,
+  }) async {
+    state = state.copyWith(isProcessing: true);
+
+    try {
+      final adminId = await _getAdminId();
+      if (adminId == null) {
+        debugPrint('Cannot request reupload: No admin ID available');
+        state = state.copyWith(isProcessing: false);
+        return false;
+      }
+
+      final success = await _repository.requestVehicleDocumentReupload(
+        vehicleId: _vehicleId,
+        docType: docType,
+        adminId: adminId,
+        reason: reason,
+        notes: notes,
+      );
+
+      if (success) {
+        await refreshVehicle();
+      }
+
+      state = state.copyWith(isProcessing: false);
+      return success;
+    } catch (e) {
+      debugPrint('Error requesting document reupload: $e');
+      state = state.copyWith(isProcessing: false);
+      return false;
+    }
+  }
+
+  // ==========================================================================
   // UTILITY METHODS
   // ==========================================================================
 

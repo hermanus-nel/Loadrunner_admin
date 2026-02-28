@@ -180,7 +180,7 @@ class _LoadRunnerAdminAppState extends ConsumerState<LoadRunnerAdminApp> {
     }
 
     switch (type) {
-      case 'dispute_filed':
+      case 'dispute_lodged':
       case 'dispute_escalated':
       case 'dispute_resolved':
         if (relatedId != null) {
@@ -188,7 +188,8 @@ class _LoadRunnerAdminAppState extends ConsumerState<LoadRunnerAdminApp> {
         } else {
           router.go(AppRoutes.disputes);
         }
-      case 'driver_pending_approval':
+      case 'new_user':
+      case 'driver_registered':
       case 'driver_document_uploaded':
       case 'driver_suspended':
         if (relatedId != null) {
@@ -196,13 +197,15 @@ class _LoadRunnerAdminAppState extends ConsumerState<LoadRunnerAdminApp> {
         } else {
           router.go(AppRoutes.users);
         }
-      case 'payment_failed':
-      case 'payment_refund_requested':
+      case 'payment_completed':
+      case 'driver_payout':
         if (relatedId != null) {
           router.go(AppRoutes.transactionDetailPath(relatedId));
         } else {
           router.go(AppRoutes.payments);
         }
+      case 'new_shipment':
+        router.go(AppRoutes.dashboard);
       default:
         router.go(AppRoutes.notifications);
     }

@@ -11,14 +11,40 @@ import '../../domain/entities/shipper_entity.dart';
 import '../providers/shippers_providers.dart';
 import '../widgets/shipper_tile.dart';
 
-class ShippersListScreen extends ConsumerStatefulWidget {
+class ShippersListScreen extends ConsumerWidget {
   const ShippersListScreen({super.key});
 
   @override
-  ConsumerState<ShippersListScreen> createState() => _ShippersListScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Shippers'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.read(shippersListNotifierProvider.notifier).fetchShippers(refresh: true);
+              ref.read(shippersListNotifierProvider.notifier).fetchOverviewStats();
+            },
+          ),
+        ],
+      ),
+      body: const ShippersListScreenContent(),
+    );
+  }
 }
 
-class _ShippersListScreenState extends ConsumerState<ShippersListScreen> {
+/// Content-only version of ShippersListScreen for embedding in tabs.
+/// This excludes the AppBar since it's meant to be used within another Scaffold.
+class ShippersListScreenContent extends ConsumerStatefulWidget {
+  const ShippersListScreenContent({super.key});
+
+  @override
+  ConsumerState<ShippersListScreenContent> createState() => _ShippersListScreenContentState();
+}
+
+class _ShippersListScreenContentState extends ConsumerState<ShippersListScreenContent> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   Timer? _debounceTimer;
@@ -62,75 +88,78 @@ class _ShippersListScreenState extends ConsumerState<ShippersListScreen> {
     final theme = Theme.of(context);
     final state = ref.watch(shippersListNotifierProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Shippers'),
-        actions: [
-          IconButton(
-            icon: Badge(
-              isLabelVisible: state.filters.hasActiveFilters,
-              child: Icon(
-                _showFilters ? Icons.filter_list_off : Icons.filter_list,
-              ),
-            ),
-            onPressed: () {
-              setState(() => _showFilters = !_showFilters);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(shippersListNotifierProvider.notifier).fetchShippers(refresh: true);
-              ref.read(shippersListNotifierProvider.notifier).fetchOverviewStats();
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Stats bar
-          if (state.overviewStats != null) _buildStatsBar(state.overviewStats!),
+    return Column(
+      children: [
+        // Stats bar
+        if (state.overviewStats != null) _buildStatsBar(state.overviewStats!),
 
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by name, email, or phone...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          ref.read(shippersListNotifierProvider.notifier).search(null);
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by name, email, or phone...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        ref.read(shippersListNotifierProvider.notifier).search(null);
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              filled: true,
+              fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            ),
+            onChanged: _onSearchChanged,
+          ),
+        ),
+
+        // Filter toggle
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              ActionChip(
+                avatar: Icon(
+                  _showFilters ? Icons.filter_list_off : Icons.filter_list,
+                  size: 18,
                 ),
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                label: Text(_showFilters ? 'Hide Filters' : 'Filters'),
+                onPressed: () {
+                  setState(() => _showFilters = !_showFilters);
+                },
               ),
-              onChanged: _onSearchChanged,
-            ),
+              if (state.filters.hasActiveFilters) ...[
+                const SizedBox(width: 8),
+                ActionChip(
+                  avatar: const Icon(Icons.clear_all, size: 18),
+                  label: const Text('Clear'),
+                  onPressed: () {
+                    ref.read(shippersListNotifierProvider.notifier).clearFilters();
+                  },
+                ),
+              ],
+            ],
           ),
+        ),
 
-          // Filters panel
-          if (_showFilters) _buildFiltersPanel(),
+        // Filters panel
+        if (_showFilters) _buildFiltersPanel(),
 
-          // Quick filters
-          _buildQuickFilters(state.filters),
+        // Quick filters
+        _buildQuickFilters(state.filters),
 
-          // List
-          Expanded(
-            child: _buildList(state),
-          ),
-        ],
-      ),
+        // List
+        Expanded(
+          child: _buildList(state),
+        ),
+      ],
     );
   }
 

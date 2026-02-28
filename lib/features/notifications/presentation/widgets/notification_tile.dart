@@ -20,7 +20,7 @@ class NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final type = notification.type;
+    final type = notification.eventType;
 
     return Dismissible(
       key: ValueKey(notification.id),
@@ -52,14 +52,14 @@ class NotificationTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppDimensions.spacingXs),
                   decoration: BoxDecoration(
-                    color: (type?.color ?? Colors.grey).withValues(alpha: 0.12),
+                    color: type.color.withValues(alpha: 0.12),
                     borderRadius:
                         BorderRadius.circular(AppDimensions.radiusSm),
                   ),
                   child: Icon(
-                    type?.icon ?? Icons.notifications,
+                    type.icon,
                     size: AppDimensions.iconSm,
-                    color: type?.color ?? Colors.grey,
+                    color: type.color,
                   ),
                 ),
                 const SizedBox(width: AppDimensions.spacingSm),
@@ -72,14 +72,13 @@ class NotificationTile extends StatelessWidget {
                       // Type label + time
                       Row(
                         children: [
-                          if (type != null)
-                            Text(
-                              type.displayName,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: type.color,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          Text(
+                            type.displayName,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: type.color,
+                              fontWeight: FontWeight.w600,
                             ),
+                          ),
                           const Spacer(),
                           Text(
                             notification.timeAgo,

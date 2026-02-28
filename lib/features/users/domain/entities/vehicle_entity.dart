@@ -25,6 +25,20 @@ class VehicleEntity extends Equatable {
   final String? driverName;
   final String? driverPhone;
 
+  // Per-document review fields
+  final String? registrationDocStatus;
+  final String? registrationDocVerifiedBy;
+  final DateTime? registrationDocVerifiedAt;
+  final String? registrationDocRejectionReason;
+  final String? insuranceDocStatus;
+  final String? insuranceDocVerifiedBy;
+  final DateTime? insuranceDocVerifiedAt;
+  final String? insuranceDocRejectionReason;
+  final String? roadworthyDocStatus;
+  final String? roadworthyDocVerifiedBy;
+  final DateTime? roadworthyDocVerifiedAt;
+  final String? roadworthyDocRejectionReason;
+
   const VehicleEntity({
     required this.id,
     required this.driverId,
@@ -48,6 +62,18 @@ class VehicleEntity extends Equatable {
     this.createdAt,
     this.driverName,
     this.driverPhone,
+    this.registrationDocStatus,
+    this.registrationDocVerifiedBy,
+    this.registrationDocVerifiedAt,
+    this.registrationDocRejectionReason,
+    this.insuranceDocStatus,
+    this.insuranceDocVerifiedBy,
+    this.insuranceDocVerifiedAt,
+    this.insuranceDocRejectionReason,
+    this.roadworthyDocStatus,
+    this.roadworthyDocVerifiedBy,
+    this.roadworthyDocVerifiedAt,
+    this.roadworthyDocRejectionReason,
   });
 
   /// Display name for vehicle (e.g., "Toyota Hilux 2020")
@@ -104,6 +130,34 @@ class VehicleEntity extends Equatable {
     return urls;
   }
 
+  /// Get per-document status for a given doc type
+  String? getDocStatus(String docType) {
+    switch (docType) {
+      case 'Registration':
+        return registrationDocStatus;
+      case 'Insurance':
+        return insuranceDocStatus;
+      case 'Roadworthy':
+        return roadworthyDocStatus;
+      default:
+        return null;
+    }
+  }
+
+  /// Get per-document rejection reason for a given doc type
+  String? getDocRejectionReason(String docType) {
+    switch (docType) {
+      case 'Registration':
+        return registrationDocRejectionReason;
+      case 'Insurance':
+        return insuranceDocRejectionReason;
+      case 'Roadworthy':
+        return roadworthyDocRejectionReason;
+      default:
+        return null;
+    }
+  }
+
   /// Get all document URLs
   Map<String, String> get documentUrls {
     final docs = <String, String>{};
@@ -142,6 +196,18 @@ class VehicleEntity extends Equatable {
     DateTime? createdAt,
     String? driverName,
     String? driverPhone,
+    String? registrationDocStatus,
+    String? registrationDocVerifiedBy,
+    DateTime? registrationDocVerifiedAt,
+    String? registrationDocRejectionReason,
+    String? insuranceDocStatus,
+    String? insuranceDocVerifiedBy,
+    DateTime? insuranceDocVerifiedAt,
+    String? insuranceDocRejectionReason,
+    String? roadworthyDocStatus,
+    String? roadworthyDocVerifiedBy,
+    DateTime? roadworthyDocVerifiedAt,
+    String? roadworthyDocRejectionReason,
   }) {
     return VehicleEntity(
       id: id ?? this.id,
@@ -168,6 +234,28 @@ class VehicleEntity extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       driverName: driverName ?? this.driverName,
       driverPhone: driverPhone ?? this.driverPhone,
+      registrationDocStatus:
+          registrationDocStatus ?? this.registrationDocStatus,
+      registrationDocVerifiedBy:
+          registrationDocVerifiedBy ?? this.registrationDocVerifiedBy,
+      registrationDocVerifiedAt:
+          registrationDocVerifiedAt ?? this.registrationDocVerifiedAt,
+      registrationDocRejectionReason:
+          registrationDocRejectionReason ?? this.registrationDocRejectionReason,
+      insuranceDocStatus: insuranceDocStatus ?? this.insuranceDocStatus,
+      insuranceDocVerifiedBy:
+          insuranceDocVerifiedBy ?? this.insuranceDocVerifiedBy,
+      insuranceDocVerifiedAt:
+          insuranceDocVerifiedAt ?? this.insuranceDocVerifiedAt,
+      insuranceDocRejectionReason:
+          insuranceDocRejectionReason ?? this.insuranceDocRejectionReason,
+      roadworthyDocStatus: roadworthyDocStatus ?? this.roadworthyDocStatus,
+      roadworthyDocVerifiedBy:
+          roadworthyDocVerifiedBy ?? this.roadworthyDocVerifiedBy,
+      roadworthyDocVerifiedAt:
+          roadworthyDocVerifiedAt ?? this.roadworthyDocVerifiedAt,
+      roadworthyDocRejectionReason:
+          roadworthyDocRejectionReason ?? this.roadworthyDocRejectionReason,
     );
   }
 
@@ -195,5 +283,17 @@ class VehicleEntity extends Equatable {
         createdAt,
         driverName,
         driverPhone,
+        registrationDocStatus,
+        registrationDocVerifiedBy,
+        registrationDocVerifiedAt,
+        registrationDocRejectionReason,
+        insuranceDocStatus,
+        insuranceDocVerifiedBy,
+        insuranceDocVerifiedAt,
+        insuranceDocRejectionReason,
+        roadworthyDocStatus,
+        roadworthyDocVerifiedBy,
+        roadworthyDocVerifiedAt,
+        roadworthyDocRejectionReason,
       ];
 }

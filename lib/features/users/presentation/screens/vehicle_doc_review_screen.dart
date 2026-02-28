@@ -4,69 +4,34 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photo_view/photo_view.dart';
 
-import '../../domain/entities/document_queue_item.dart';
-import '../../domain/entities/driver_document.dart';
-import '../providers/document_queue_providers.dart';
-import '../providers/document_review_providers.dart';
+import '../providers/vehicle_providers.dart';
 import '../widgets/document_reupload_dialog.dart';
 import '../widgets/status_badge.dart';
 
-/// Full-screen document review screen with zoom, driver context panel,
-/// and action buttons (Approve, Reject, Request Re-upload, Flag).
-class DocumentReviewScreen extends ConsumerStatefulWidget {
-  final String documentId;
+/// Full-screen vehicle document review screen with zoom and
+/// Reject / Re-upload / Approve actions for a single document.
+class VehicleDocReviewScreen extends ConsumerStatefulWidget {
+  final String vehicleId;
+  final String docType;
+  final String docUrl;
+  final String? currentStatus;
 
-  /// Optional pre-loaded data passed via route extra.
-  /// If null, the screen can still be used but won't show driver context.
-  final DocumentQueueItem? queueItem;
-
-  /// Alternatively, pass a DriverDocument + driver context separately
-  /// (used when navigating from driver profile screen).
-  final DriverDocument? document;
-  final String? driverName;
-  final String? driverPhone;
-  final String? driverVerificationStatus;
-  final DateTime? driverCreatedAt;
-
-  const DocumentReviewScreen({
+  const VehicleDocReviewScreen({
     super.key,
-    required this.documentId,
-    this.queueItem,
-    this.document,
-    this.driverName,
-    this.driverPhone,
-    this.driverVerificationStatus,
-    this.driverCreatedAt,
+    required this.vehicleId,
+    required this.docType,
+    required this.docUrl,
+    this.currentStatus,
   });
 
   @override
-  ConsumerState<DocumentReviewScreen> createState() =>
-      _DocumentReviewScreenState();
+  ConsumerState<VehicleDocReviewScreen> createState() =>
+      _VehicleDocReviewScreenState();
 }
 
-class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
+class _VehicleDocReviewScreenState
+    extends ConsumerState<VehicleDocReviewScreen> {
   bool _showOverlay = true;
-  bool _showDriverPanel = false;
-
-  DriverDocument? get _document =>
-      widget.queueItem?.document ?? widget.document;
-
-  String get _driverName =>
-      widget.queueItem?.driverFullName ?? widget.driverName ?? 'Unknown Driver';
-
-  String? get _driverPhone =>
-      widget.queueItem?.driverPhone ?? widget.driverPhone;
-
-  String get _driverVerificationStatus =>
-      widget.queueItem?.driverVerificationStatus ??
-      widget.driverVerificationStatus ??
-      'pending';
-
-  DateTime? get _driverCreatedAt =>
-      widget.queueItem?.driverCreatedAt ?? widget.driverCreatedAt;
-
-  String get _driverId =>
-      widget.queueItem?.document.driverId ?? widget.document?.driverId ?? '';
 
   @override
   void initState() {
@@ -87,14 +52,7 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
   }
 
   void _toggleOverlay() {
-    setState(() {
-      _showOverlay = !_showOverlay;
-      if (!_showOverlay) _showDriverPanel = false;
-    });
-  }
-
-  void _toggleDriverPanel() {
-    setState(() => _showDriverPanel = !_showDriverPanel);
+    setState(() => _showOverlay = !_showOverlay);
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -115,9 +73,6 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
   // ==================================================================
 
   Future<void> _handleApprove() async {
-    final doc = _document;
-    if (doc == null) return;
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -141,7 +96,7 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Approve this ${doc.label}?',
+              'Approve this ${widget.docType} document?',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -197,62 +152,40 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
     if (confirmed != true || !mounted) return;
 
     final success = await ref
-        .read(documentReviewNotifierProvider.notifier)
-        .approveDocument(
-          documentId: doc.id,
-          driverId: _driverId,
-          docType: doc.docType,
-        );
+        .read(vehicleDetailControllerProvider(widget.vehicleId).notifier)
+        .approveVehicleDocument(widget.docType);
 
     if (success && mounted) {
-      _showSnackBar('Document approved successfully');
-      ref
-          .read(documentQueueNotifierProvider.notifier)
-          .removeDocument(doc.id);
+      _showSnackBar('${widget.docType} document approved');
       Navigator.of(context).pop(true);
     } else if (mounted) {
-      final state = ref.read(documentReviewNotifierProvider);
-      _showSnackBar(
-        state.actionError ?? 'Failed to approve document',
-        isError: true,
-      );
+      _showSnackBar('Failed to approve document', isError: true);
     }
   }
 
   Future<void> _handleReupload() async {
-    final doc = _document;
-    if (doc == null) return;
-
     final result = await DocumentReuploadDialog.show(
       context: context,
-      docTypeLabel: doc.label,
+      docTypeLabel: '${widget.docType} Document',
     );
 
     if (result == null || !mounted) return;
 
+    final reason = result.customReason ?? result.reason.displayText;
+
     final success = await ref
-        .read(documentReviewNotifierProvider.notifier)
-        .requestReupload(
-          documentId: doc.id,
-          driverId: _driverId,
-          docType: doc.docType,
-          reason: result.reason,
-          customReason: result.customReason,
-          adminNotes: result.adminNotes,
+        .read(vehicleDetailControllerProvider(widget.vehicleId).notifier)
+        .requestVehicleDocumentReupload(
+          widget.docType,
+          reason,
+          notes: result.adminNotes,
         );
 
     if (success && mounted) {
-      _showSnackBar('Re-upload requested');
-      ref
-          .read(documentQueueNotifierProvider.notifier)
-          .removeDocument(doc.id);
+      _showSnackBar('Re-upload requested for ${widget.docType}');
       Navigator.of(context).pop(true);
     } else if (mounted) {
-      final state = ref.read(documentReviewNotifierProvider);
-      _showSnackBar(
-        state.actionError ?? 'Failed to request re-upload',
-        isError: true,
-      );
+      _showSnackBar('Failed to request re-upload', isError: true);
     }
   }
 
@@ -262,32 +195,10 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final reviewState = ref.watch(documentReviewNotifierProvider);
-    final doc = _document;
-    final theme = Theme.of(context);
-
-    if (doc == null) {
-      return Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.black54,
-          leading: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          title: const Text(
-            'Document Review',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-        body: const Center(
-          child: Text(
-            'Document data not available',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
+    final state = ref.watch(
+      vehicleDetailControllerProvider(widget.vehicleId),
+    );
+    final isProcessing = state.isProcessing;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -298,11 +209,15 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
           GestureDetector(
             onTap: _toggleOverlay,
             child: PhotoView(
-              imageProvider: CachedNetworkImageProvider(doc.docUrl),
+              imageProvider: CachedNetworkImageProvider(
+                widget.docUrl,
+                cacheKey: widget.docUrl,
+              ),
               initialScale: PhotoViewComputedScale.contained,
               minScale: PhotoViewComputedScale.contained,
               maxScale: PhotoViewComputedScale.covered * 4,
-              backgroundDecoration: const BoxDecoration(color: Colors.black),
+              backgroundDecoration:
+                  const BoxDecoration(color: Colors.black),
               loadingBuilder: (context, event) {
                 return Center(
                   child: SizedBox(
@@ -337,7 +252,10 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: () {
-                          CachedNetworkImage.evictFromCache(doc.docUrl);
+                          CachedNetworkImage.evictFromCache(
+                            widget.docUrl,
+                            cacheKey: widget.docUrl,
+                          );
                           setState(() {});
                         },
                         icon: const Icon(Icons.refresh),
@@ -354,7 +272,7 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
             ),
           ),
 
-          // App bar overlay
+          // Top bar overlay
           if (_showOverlay)
             Positioned(
               top: 0,
@@ -371,8 +289,10 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
                     child: Row(
                       children: [
                         IconButton(
@@ -384,33 +304,23 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                doc.label,
+                                '${widget.docType} Document',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              Text(
-                                _driverName,
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
+                              const SizedBox(height: 4),
+                              if (widget.currentStatus != null)
+                                StatusBadge(
+                                  status: widget.currentStatus!,
+                                  size: StatusBadgeSize.small,
                                 ),
-                              ),
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(
-                            _showDriverPanel
-                                ? Icons.info
-                                : Icons.info_outline,
-                            color: Colors.white,
-                          ),
-                          onPressed: _toggleDriverPanel,
-                          tooltip: 'Driver info',
-                        ),
+                        const SizedBox(width: 48),
                       ],
                     ),
                   ),
@@ -418,110 +328,20 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
               ),
             ),
 
-          // Driver context panel
-          if (_showOverlay && _showDriverPanel)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 56,
-              left: 16,
-              right: 16,
-              child: _buildDriverPanel(context, theme),
-            ),
-
-          // Action bar overlay
+          // Bottom action bar overlay
           if (_showOverlay)
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildActionBar(context, doc, reviewState, theme),
+              child: _buildActionBar(isProcessing),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildDriverPanel(BuildContext context, ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.person, color: Colors.white70, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                _driverName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          if (_driverPhone != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.phone, color: Colors.white70, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  _driverPhone!,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(
-                Icons.verified_user,
-                color: Colors.white70,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              StatusBadge(
-                status: _driverVerificationStatus,
-                size: StatusBadgeSize.small,
-              ),
-            ],
-          ),
-          if (_driverCreatedAt != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Colors.white70,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Registered: ${_formatDate(_driverCreatedAt!)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionBar(
-    BuildContext context,
-    DriverDocument doc,
-    DocumentReviewState reviewState,
-    ThemeData theme,
-  ) {
-    final isLoading = reviewState.isActionLoading;
-
+  Widget _buildActionBar(bool isProcessing) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -538,7 +358,7 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Hint
-              if (!isLoading)
+              if (!isProcessing)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: Text(
@@ -548,7 +368,7 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
                 ),
 
               // Loading indicator
-              if (isLoading)
+              if (isProcessing)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: SizedBox(
@@ -567,7 +387,7 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
                   // Re-upload button (always shown)
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: isLoading ? null : _handleReupload,
+                      onPressed: isProcessing ? null : _handleReupload,
                       icon: const Icon(Icons.upload_file, size: 18),
                       label: const Text('Re-upload'),
                       style: OutlinedButton.styleFrom(
@@ -575,17 +395,20 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
                         side: BorderSide(
                           color: Colors.orange[300]!.withValues(alpha: 0.5),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
 
                   // Approve button (hidden when already approved)
-                  if (!doc.isApproved) ...[
+                  if (widget.currentStatus != 'approved') ...[
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: isLoading ? null : _handleApprove,
+                        onPressed: isProcessing ? null : _handleApprove,
                         icon: const Icon(Icons.check, size: 18),
                         label: const Text('Approve'),
                         style: OutlinedButton.styleFrom(
@@ -605,9 +428,5 @@ class _DocumentReviewScreenState extends ConsumerState<DocumentReviewScreen> {
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
   }
 }

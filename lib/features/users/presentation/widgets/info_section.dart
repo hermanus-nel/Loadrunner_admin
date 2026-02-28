@@ -90,7 +90,7 @@ class InfoSection extends StatelessWidget {
         children: [
           // Label
           SizedBox(
-            width: 120,
+            width: 100,
             child: Text(
               item.label,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -98,7 +98,7 @@ class InfoSection extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           // Value
           Expanded(
             child: item.widget ??

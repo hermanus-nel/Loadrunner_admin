@@ -283,6 +283,18 @@ class VehicleApprovalTimeline extends StatelessWidget {
   }
 
   String _getActionTitle(VehicleApprovalHistoryItem item) {
+    // Handle document-level actions
+    final docLabel = item.documentType ?? 'Document';
+    switch (item.action) {
+      case 'approve_vehicle_document':
+        return '$docLabel Approved';
+      case 'reject_vehicle_document':
+        return '$docLabel Rejected';
+      case 'request_vehicle_document_reupload':
+        return '$docLabel Re-upload Requested';
+    }
+
+    // Vehicle-level actions
     switch (item.newStatus.toLowerCase()) {
       case 'approved':
         return 'Vehicle Approved';

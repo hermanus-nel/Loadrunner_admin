@@ -185,4 +185,7 @@ abstract class DisputesRepository {
 
   /// Get disputes for a specific shipment
   Future<List<DisputeEntity>> getDisputesByShipment({required String shipmentId});
+
+  /// Get count of active disputes (open, investigating, awaiting evidence, escalated)
+  Future<int> fetchActiveDisputesCount();
 }

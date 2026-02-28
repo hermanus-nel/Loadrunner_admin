@@ -1,5 +1,6 @@
 // lib/features/disputes/presentation/widgets/evidence_gallery.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -138,7 +139,7 @@ class EvidenceCard extends StatelessWidget {
                             radius: 10,
                             backgroundColor: theme.colorScheme.primaryContainer,
                             backgroundImage: evidence.submittedBy!.profilePhotoUrl != null
-                                ? NetworkImage(evidence.submittedBy!.profilePhotoUrl!)
+                                ? CachedNetworkImageProvider(evidence.submittedBy!.profilePhotoUrl!)
                                 : null,
                             child: evidence.submittedBy!.profilePhotoUrl == null
                                 ? Text(
@@ -208,12 +209,12 @@ class EvidenceCard extends StatelessWidget {
     if (evidence.hasFile && evidence.isImageFile) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          evidence.fileUrl!,
+        child: CachedNetworkImage(
+          imageUrl: evidence.fileUrl!,
           width: 60,
           height: 60,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildPlaceholder(theme),
+          errorWidget: (_, __, ___) => _buildPlaceholder(theme),
         ),
       );
     }
@@ -413,22 +414,15 @@ class _EvidenceViewerScreenState extends State<EvidenceViewerScreen> {
         minScale: 0.5,
         maxScale: 4.0,
         child: Center(
-          child: Image.network(
-            item.fileUrl!,
+          child: CachedNetworkImage(
+            imageUrl: item.fileUrl!,
             fit: BoxFit.contain,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Center(
-                child: CircularProgressIndicator(
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
-                  color: Colors.white,
-                ),
-              );
-            },
-            errorBuilder: (_, __, ___) => _buildPlaceholder(item),
+            placeholder: (context, url) => const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+            errorWidget: (context, url, error) => const Center(
+              child: Icon(Icons.broken_image, color: Colors.white54, size: 48),
+            ),
           ),
         ),
       );
@@ -641,10 +635,10 @@ class EvidenceGridView extends StatelessWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: item.hasFile && item.isImageFile
-            ? Image.network(
-                item.fileUrl!,
+            ? CachedNetworkImage(
+                imageUrl: item.fileUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
+                errorWidget: (_, __, ___) => Icon(
                   Icons.broken_image,
                   color: theme.colorScheme.outline,
                 ),

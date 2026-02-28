@@ -379,8 +379,10 @@ class DocumentReviewRepository {
 
   /// Approve all pending/under_review documents for a driver.
   ///
-  /// Approves each document individually with its own notification,
-  /// then checks if all-docs-approved.
+  /// Approves each document individually with its own notification.
+  /// A DB trigger (`trg_auto_verify_driver`) may auto-verify the driver
+  /// when docs are approved. This method captures the driver's status
+  /// beforehand and restores it so that only the documents are affected.
   Future<bool> approveAllDocuments({
     required String driverId,
     required String adminId,
@@ -388,6 +390,20 @@ class DocumentReviewRepository {
   }) async {
     try {
       debugPrint('Approving all documents for driver $driverId');
+
+      // Capture driver's current verification status before any doc updates,
+      // because the DB trigger may auto-verify the driver.
+      final driverRow = await _jwtRecoveryHandler.executeWithRecovery(
+        () => _supabaseProvider.client
+            .from('users')
+            .select('driver_verification_status, verification_notes')
+            .eq('id', driverId)
+            .single(),
+        'snapshot driver status before bulk approve',
+      );
+      final statusBefore =
+          driverRow['driver_verification_status'] as String?;
+      final notesBefore = driverRow['verification_notes'] as String?;
 
       // Fetch all pending/under_review docs for this driver
       final response = await _jwtRecoveryHandler.executeWithRecovery(
@@ -462,11 +478,29 @@ class DocumentReviewRepository {
         );
       }
 
-      // Check if all required docs are now approved -> auto-verify driver
-      await _checkAndHandleAllDocsApproved(
-        driverId: driverId,
-        adminId: adminId,
-      );
+      // The DB trigger (trg_auto_verify_driver) auto-verifies the driver
+      // when all required docs are approved. Restore the original status
+      // via the update_driver_verification RPC (SECURITY DEFINER) so that
+      // "Approve Documents" only approves documents, not the driver.
+      if (statusBefore != null && statusBefore != 'approved') {
+        await _jwtRecoveryHandler.executeWithRecovery(
+          () => _supabaseProvider.client.rpc(
+            'update_driver_verification',
+            params: {
+              'p_driver_id': driverId,
+              'p_admin_id': adminId,
+              'p_new_status': statusBefore,
+              'p_reason': 'bulk_doc_approve_status_restore',
+              'p_notes': notesBefore,
+            },
+          ),
+          'restore driver status after bulk doc approve',
+        );
+        debugPrint(
+          'Restored driver $driverId status to $statusBefore '
+          '(reverted auto-verify by DB trigger)',
+        );
+      }
 
       debugPrint('All ${docs.length} documents approved for driver $driverId');
       return true;

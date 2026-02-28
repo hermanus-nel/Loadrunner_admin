@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/app_config.dart';
 import 'session_service.dart';
 
 /// A provider class that manages the Supabase client instance
@@ -21,6 +22,7 @@ class SupabaseProvider {
 
   // Cached client reference
   SupabaseClient? _client;
+  SupabaseClient? _adminClient;
   bool _isInitialized = false;
 
   // Session service reference - primary auth source
@@ -92,6 +94,25 @@ class SupabaseProvider {
     }
 
     return _client!;
+  }
+
+  /// Get a Supabase client using the service role key (bypasses RLS).
+  /// Used for admin operations on tables without admin RLS policies.
+  SupabaseClient get adminClient {
+    if (_adminClient != null) return _adminClient!;
+
+    final serviceRoleKey = AppConfig.instance.supabaseServiceRoleKey;
+    if (serviceRoleKey.isEmpty) {
+      _debugLog('Service role key not configured, falling back to regular client');
+      return client;
+    }
+
+    _adminClient = SupabaseClient(
+      AppConfig.instance.supabaseUrl,
+      serviceRoleKey,
+    );
+    _debugLog('Admin client created with service role key');
+    return _adminClient!;
   }
 
   /// Get the current authenticated user ID
